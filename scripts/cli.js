@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { execa } from 'execa';
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import {
   detectPackageManager,
