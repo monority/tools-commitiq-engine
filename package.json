@@ -1,6 +1,7 @@
 {
   "name": "@acme/git-quality",
   "version": "1.0.0",
+  "description": "Pre-commit quality checks for staged files and project scripts.",
   "type": "module",
   "bin": {
     "git-quality": "scripts/cli.js"
@@ -9,15 +10,24 @@
     "scripts"
   ],
   "scripts": {
-    "prepare": "husky"
+    "prepare": "node scripts/prepare.js"
   },
-  "devDependencies": {
+  "keywords": [
+    "git",
+    "pre-commit",
+    "husky",
+    "eslint",
+    "prettier",
+    "quality"
+  ],
+  "dependencies": {
+    "execa": "^9.5.2",
     "husky": "^9.1.6"
-  },
-  "peerDependencies": {
-    "execa": "^9.5.2"
   },
   "engines": {
     "node": ">=18"
+  },
+  "gitQuality": {
+    "scripts": []
   }
 }
