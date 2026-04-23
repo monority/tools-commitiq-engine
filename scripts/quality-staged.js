@@ -1,6 +1,6 @@
 import { execa } from 'execa';
 import { access, readFile } from 'node:fs/promises';
-import { extname, join, resolve } from 'node:path';
+import { extname, join, relative, resolve } from 'node:path';
 import { createInterface } from 'node:readline/promises';
 import { stdin as input, stdout as output } from 'node:process';
 
@@ -230,6 +230,10 @@ async function runPackageScript(packageManager, scriptName, root) {
 }
 
 async function getStagedFiles(root) {
+  const { stdout: gitRootOut } = await execa('git', ['rev-parse', '--show-toplevel']);
+  const gitRoot = gitRootOut.trim();
+  const projectRelativeToGit = relative(gitRoot, root);
+
   const { stdout } = await execa('git', ['diff', '--cached', '--name-only', '--diff-filter=ACMR'], {
     cwd: root,
   });
@@ -237,7 +241,13 @@ async function getStagedFiles(root) {
   return stdout
     .split('\n')
     .map((value) => value.trim())
-    .filter(Boolean);
+    .filter(Boolean)
+    .map((file) => {
+      if (projectRelativeToGit && file.startsWith(projectRelativeToGit + '/')) {
+        return file.substring(projectRelativeToGit.length + 1);
+      }
+      return file;
+    });
 }
 
 async function restageFiles(files, root) {
