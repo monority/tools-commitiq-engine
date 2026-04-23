@@ -1,6 +1,6 @@
 import { execa } from 'execa';
 import { access, readFile } from 'node:fs/promises';
-import { extname, join } from 'node:path';
+import { extname, join, resolve } from 'node:path';
 import { createInterface } from 'node:readline/promises';
 import { stdin as input, stdout as output } from 'node:process';
 
@@ -114,7 +114,21 @@ export async function runCheck() {
 
 export async function getProjectRoot() {
   const { stdout } = await execa('git', ['rev-parse', '--show-toplevel']);
-  return stdout.trim();
+  const gitRoot = resolve(stdout.trim());
+  let current = resolve(process.cwd());
+
+  while (current.startsWith(gitRoot)) {
+    try {
+      await access(join(current, 'package.json'));
+      return current;
+    } catch {
+      const parent = resolve(join(current, '..'));
+      if (parent === current) break;
+      current = parent;
+    }
+  }
+
+  return gitRoot;
 }
 
 export async function detectPackageManager(root) {
@@ -233,7 +247,7 @@ async function restageFiles(files, root) {
   });
 }
 
-async function readProjectPackage(root) {
+export async function readProjectPackage(root) {
   const packageJsonPath = join(root, 'package.json');
   const raw = await readFile(packageJsonPath, 'utf8');
   return JSON.parse(raw);

@@ -1,12 +1,13 @@
 #!/usr/bin/env node
 import { execa } from 'execa';
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import {
   detectPackageManager,
   ensurePackagesInstalled,
   getPackageManagerExecCommand,
   getProjectRoot,
+  readProjectPackage,
   runCheck,
   runStaged,
 } from './quality-staged.js';
@@ -85,12 +86,6 @@ async function readHookIfExists(hookPath) {
 
     throw error;
   }
-}
-
-async function readProjectPackage(root) {
-  const packageJsonPath = join(root, 'package.json');
-  const raw = await readFile(packageJsonPath, 'utf8');
-  return JSON.parse(raw);
 }
 
 function printHelp() {
