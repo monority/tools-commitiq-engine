@@ -1,5 +1,5 @@
 {
-  "name": "git-quality",
+  "name": "commit-quality-check",
   "version": "1.0.1",
   "description": "Pre-commit quality checks for staged files and project scripts.",
   "type": "module",
@@ -11,6 +11,9 @@
   ],
   "scripts": {
     "prepare": "node scripts/prepare.js"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "keywords": [
     "git",
