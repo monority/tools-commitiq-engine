@@ -6,18 +6,34 @@ Small CLI to keep commits clean before `git commit`.
 
 ```bash
 pnpm add -D commit-quality-check husky prettier eslint
-pnpm exec git-quality init
+pnpm exec cqc i
 ```
 
 One-liner for a `pnpm` project:
 
 ```bash
-pnpm add -D commit-quality-check husky prettier eslint && pnpm exec git-quality init
+pnpm add -D commit-quality-check husky prettier eslint && pnpm exec cqc i
+```
+
+## Short commands
+
+```text
+cqc i  -> init
+cqc s  -> staged
+cqc c  -> check
+```
+
+The long commands still work too:
+
+```bash
+pnpm exec cqc init
+pnpm exec cqc staged
+pnpm exec cqc check
 ```
 
 ## What the hook does
 
-`git-quality check`:
+`cqc c`:
 
 1. runs `prettier --write` on compatible staged files
 2. runs `eslint --fix` on staged JS and TS files
@@ -26,7 +42,7 @@ pnpm add -D commit-quality-check husky prettier eslint && pnpm exec git-quality 
 
 ## Auto-detected scripts
 
-Without any config, `git-quality check` looks for these scripts in this order:
+Without any config, `cqc c` looks for these scripts in this order:
 
 ```text
 lint
@@ -51,7 +67,7 @@ Example:
 Then a single command runs everything that exists:
 
 ```bash
-pnpm exec git-quality check
+pnpm exec cqc c
 ```
 
 ## Optional config
@@ -73,9 +89,9 @@ Add `gitQuality` in the consumer project's `package.json` if you want to force a
 ## Commands
 
 ```bash
-pnpm exec git-quality init
-pnpm exec git-quality staged
-pnpm exec git-quality check
+pnpm exec cqc i
+pnpm exec cqc s
+pnpm exec cqc c
 ```
 
 ## Notes
@@ -83,4 +99,4 @@ pnpm exec git-quality check
 - `prettier` and `eslint` are skipped if they are not installed in the target project.
 - The package manager is auto-detected (`pnpm`, `npm`, `yarn`, `bun`).
 - If `gitQuality.scripts` is empty, common quality scripts are auto-detected.
-- The package name is `commit-quality-check`.
+- Older `git-quality` references have been replaced by `commit-quality-check` and `cqc`.

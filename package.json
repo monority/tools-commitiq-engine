@@ -4,7 +4,8 @@
   "description": "Pre-commit quality checks for staged files and project scripts.",
   "type": "module",
   "bin": {
-    "git-quality": "scripts/cli.js"
+    "commit-quality-check": "scripts/cli.js",
+    "cqc": "scripts/cli.js"
   },
   "files": [
     "scripts"

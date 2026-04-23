@@ -1,1 +1,1 @@
-node scripts/cli.js check
+node scripts/cli.js c

@@ -13,11 +13,11 @@ import {
 
 const command = process.argv[2] ?? 'check';
 
-if (command === 'staged') {
+if (command === 'staged' || command === 's') {
   await runStaged();
-} else if (command === 'check') {
+} else if (command === 'check' || command === 'c') {
   await runCheck();
-} else if (command === 'init') {
+} else if (command === 'init' || command === 'i') {
   await initHook();
 } else if (command === '--help' || command === '-h' || command === 'help') {
   printHelp();
@@ -62,11 +62,11 @@ async function initHook() {
     await writeFile(hookPath, hookBody, 'utf8');
   }
 
-  console.log('git-quality is ready. The hook will run on every commit.');
+  console.log('commit-quality-check is ready. The hook will run on every commit.');
 }
 
 function createHookFile(packageManager) {
-  const { command: pmCommand, args } = getPackageManagerExecCommand(packageManager, ['git-quality', 'check']);
+  const { command: pmCommand, args } = getPackageManagerExecCommand(packageManager, ['cqc', 'c']);
   const commandLine = [pmCommand, ...args].join(' ');
 
   return `#!/usr/bin/env sh
@@ -94,11 +94,11 @@ async function readProjectPackage(root) {
 }
 
 function printHelp() {
-  console.log(`git-quality
+  console.log(`commit-quality-check
 
 Commands:
-  git-quality init    Install the Husky pre-commit hook
-  git-quality staged  Run fixes only on staged files
-  git-quality check   Run staged fixes, then configured project scripts
+  cqc i | init     Install the Husky pre-commit hook
+  cqc s | staged   Run fixes only on staged files
+  cqc c | check    Run staged fixes, then configured project scripts
 `);
 }
