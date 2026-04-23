@@ -4,8 +4,14 @@
         ".husky/pre-commit",
         ".npmignore",
         "README.md",
-        "build.mjs",
         "package.json",
+        "scripts/cli.js",
         "scripts/quality-staged.js"
+    ],
+    "install_commands": [
+        "cd output/git-quality-package",
+        "npm install",
+        "npm run prepare",
+        "npm pack --dry-run"
     ]
 }

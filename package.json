@@ -1,21 +1,23 @@
 {
-    "name": "@acme/git-quality",
-    "version": "1.0.0",
-    "type": "module",
-    "bin": {
-        "git-quality": "./dist/cli.js"
-    },
-    "files": [
-        "dist"
-    ],
-    "scripts": {
-        "build": "node build.mjs",
-        "prepare": "pnpm build"
-    },
-    "dependencies": {
-        "execa": "^9.5.2"
-    },
-    "engines": {
-        "node": ">=18"
-    }
+  "name": "@acme/git-quality",
+  "version": "1.0.0",
+  "type": "module",
+  "bin": {
+    "git-quality": "scripts/cli.js"
+  },
+  "files": [
+    "scripts"
+  ],
+  "scripts": {
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "husky": "^9.1.6"
+  },
+  "peerDependencies": {
+    "execa": "^9.5.2"
+  },
+  "engines": {
+    "node": ">=18"
+  }
 }

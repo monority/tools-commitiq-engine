@@ -9,7 +9,11 @@ export async function run() {
     const formatFiles = files.filter(f => /\.(js|jsx|ts|tsx|json|md|yml|yaml|css|scss)$/.test(f));
     const tasks = [];
 
-    if (formatFiles.length) tasks.push(execa('pnpm', ['exec', 'prettier', '--write', ...formatFiles], { stdio: 'inherit' }));
-    if (jsFiles.length) tasks.push(execa('pnpm', ['exec', 'eslint', '--fix', ...jsFiles], { stdio: 'inherit' }));
+    if (formatFiles.length) {
+        tasks.push(execa('pnpm', ['exec', 'prettier', '--write', ...formatFiles], { stdio: 'inherit' }));
+    }
+    if (jsFiles.length) {
+        tasks.push(execa('pnpm', ['exec', 'eslint', '--fix', ...jsFiles], { stdio: 'inherit' }));
+    }
     await Promise.all(tasks);
 }
