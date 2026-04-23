@@ -1,0 +1,21 @@
+{
+    "name": "@acme/git-quality",
+    "version": "1.0.0",
+    "type": "module",
+    "bin": {
+        "git-quality": "./dist/cli.js"
+    },
+    "files": [
+        "dist"
+    ],
+    "scripts": {
+        "build": "node build.mjs",
+        "prepare": "pnpm build"
+    },
+    "dependencies": {
+        "execa": "^9.5.2"
+    },
+    "engines": {
+        "node": ">=18"
+    }
+}

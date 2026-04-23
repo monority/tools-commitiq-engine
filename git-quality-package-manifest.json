@@ -1,0 +1,11 @@
+{
+    "path": "output/git-quality-package",
+    "files": [
+        ".husky/pre-commit",
+        ".npmignore",
+        "README.md",
+        "build.mjs",
+        "package.json",
+        "scripts/quality-staged.js"
+    ]
+}
