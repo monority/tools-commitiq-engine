@@ -1,18 +1,18 @@
-# @acme/git-quality
+# git-quality
 
 Small CLI to keep commits clean before `git commit`.
 
 ## Quick install
 
 ```bash
-pnpm add -D @acme/git-quality husky prettier eslint
+pnpm add -D git-quality husky prettier eslint
 pnpm exec git-quality init
 ```
 
 One-liner for a `pnpm` project:
 
 ```bash
-pnpm add -D @acme/git-quality husky prettier eslint && pnpm exec git-quality init
+pnpm add -D git-quality husky prettier eslint && pnpm exec git-quality init
 ```
 
 ## What the hook does
@@ -83,4 +83,4 @@ pnpm exec git-quality check
 - `prettier` and `eslint` are skipped if they are not installed in the target project.
 - The package manager is auto-detected (`pnpm`, `npm`, `yarn`, `bun`).
 - If `gitQuality.scripts` is empty, common quality scripts are auto-detected.
-- Replace `@acme/git-quality` with your real package scope before publishing.
+- The package name is now `git-quality` for direct public publishing without a scope.

@@ -1,6 +1,6 @@
 {
-  "name": "@acme/git-quality",
-  "version": "1.0.0",
+  "name": "git-quality",
+  "version": "1.0.1",
   "description": "Pre-commit quality checks for staged files and project scripts.",
   "type": "module",
   "bin": {
