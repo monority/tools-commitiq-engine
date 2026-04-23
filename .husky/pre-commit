@@ -1,1 +1,1 @@
-pnpm git-quality staged
+node scripts/cli.js check
