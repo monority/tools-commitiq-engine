@@ -1,6 +1,6 @@
 {
   "name": "commit-quality-check",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "Pre-commit quality checks for staged files and project scripts.",
   "type": "module",
   "bin": {
