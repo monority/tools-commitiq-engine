@@ -100,3 +100,8 @@ pnpm exec cqc c
 - The package manager is auto-detected (`pnpm`, `npm`, `yarn`, `bun`).
 - If `gitQuality.scripts` is empty, common quality scripts are auto-detected.
 - Older `git-quality` references have been replaced by `commit-quality-check` and `cqc`.
+
+
+## Repo
+
+[https://github.com/monority/commit-quality-check/]
