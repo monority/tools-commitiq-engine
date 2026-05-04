@@ -1,1 +1,3 @@
-node scripts/cli.js c
+#!/usr/bin/env sh
+
+npm exec -- cqc c

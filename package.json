@@ -11,7 +11,7 @@
     "scripts"
   ],
   "scripts": {
-    "prepare": "node scripts/prepare.js"
+    "prepare": "husky"
   },
   "publishConfig": {
     "access": "public"
@@ -25,6 +25,7 @@
     "quality"
   ],
   "dependencies": {
+    "commit-quality-check": "^1.0.5",
     "execa": "^9.5.2",
     "husky": "^9.1.6"
   },
