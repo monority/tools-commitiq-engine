@@ -12,6 +12,15 @@ export class FormatChecker extends BaseChecker {
     if (!config.staged.prettier)
       return { success: true, message: "Skipped by config" };
 
+    const depCheck = await this.checkDependencies(context, ["prettier"]);
+    if (!depCheck.installed) {
+      return {
+        success: true,
+        message: "Skipped: Prettier not installed",
+        suggestedFix: depCheck.command,
+      };
+    }
+
     const files = await this.getStagedFiles(context);
     const formatFiles = files.filter((f) => this.isFormattable(f));
 

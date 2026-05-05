@@ -8,9 +8,18 @@ export class LintChecker extends BaseChecker {
   }
 
   async run(context) {
-    const { root, config } = context;
+    const { config } = context;
     if (!config.staged.eslint)
       return { success: true, message: "Skipped by config" };
+
+    const depCheck = await this.checkDependencies(context, ["eslint"]);
+    if (!depCheck.installed) {
+      return {
+        success: true,
+        message: "Skipped: ESLint not installed",
+        suggestedFix: depCheck.command,
+      };
+    }
 
     const files = await this.getStagedFiles(context);
     const lintFiles = files.filter((f) => this.isLintable(f));
@@ -25,19 +34,6 @@ export class LintChecker extends BaseChecker {
       message: result.success ? "Linting passed" : result.stderr,
       fixed: true,
     };
-  }
-
-  async getStagedFiles(context) {
-    const { root, execa } = context;
-    const { stdout } = await execa(
-      "git",
-      ["diff", "--cached", "--name-only", "--diff-filter=ACMR"],
-      { cwd: root },
-    );
-    return stdout
-      .split("\n")
-      .map((f) => f.trim())
-      .filter(Boolean);
   }
 
   isLintable(file) {

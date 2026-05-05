@@ -7,7 +7,7 @@ import {
 } from "../src/utils/ProjectUtils.js";
 import { execa } from "execa";
 
-export async function runCheck() {
+export async function runCheck(options = {}) {
   try {
     const root = await getProjectRoot();
     const packageManager = await detectPackageManager(root);
@@ -25,6 +25,7 @@ export async function runCheck() {
       .filter(Boolean);
 
     const engine = createQualityEngine({
+      ...options,
       root,
       packageManager,
       projectPackage,

@@ -1,26 +1,29 @@
 #!/usr/bin/env node
-import { execa } from 'execa';
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { execa } from "execa";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { join } from "node:path";
 import {
   detectPackageManager,
   ensurePackagesInstalled,
   getPackageManagerExecCommand,
   getProjectRoot,
   readProjectPackage,
-  runCheck,
-  runStaged,
-} from './quality-staged.js';
+} from "../src/utils/ProjectUtils.js";
+import { runCheck } from "./quality-staged.js";
 
-const command = process.argv[2] ?? 'check';
+const command = process.argv[2] ?? "check";
+const generateReport = process.argv.includes("--report");
 
-if (command === 'staged' || command === 's') {
-  await runStaged();
-} else if (command === 'check' || command === 'c') {
-  await runCheck();
-} else if (command === 'init' || command === 'i') {
+if (
+  command === "staged" ||
+  command === "s" ||
+  command === "check" ||
+  command === "c"
+) {
+  await runCheck({ generateReport });
+} else if (command === "init" || command === "i") {
   await initHook();
-} else if (command === '--help' || command === '-h' || command === 'help') {
+} else if (command === "--help" || command === "-h" || command === "help") {
   printHelp();
 } else {
   console.error(`Unknown command: ${command}`);
@@ -37,38 +40,49 @@ async function initHook() {
     root,
     packageManager,
     projectPackage,
-    packages: ['husky'],
-    reason: 'install the pre-commit hook',
+    packages: ["husky"],
+    reason: "install the pre-commit hook",
   });
 
-  if (!projectPackage.dependencies?.husky && !projectPackage.devDependencies?.husky) {
-    console.error('Husky is required to install the pre-commit hook.');
+  if (
+    !projectPackage.dependencies?.husky &&
+    !projectPackage.devDependencies?.husky
+  ) {
+    console.error("Husky is required to install the pre-commit hook.");
     process.exit(1);
   }
 
-  const { command: pmCommand, args: pmArgs } = getPackageManagerExecCommand(packageManager, ['husky', 'init']);
+  const { command: pmCommand, args: pmArgs } = getPackageManagerExecCommand(
+    packageManager,
+    ["husky", "init"],
+  );
 
-  console.log('Installing Husky pre-commit hook...');
+  console.log("Installing Husky pre-commit hook...");
   await execa(pmCommand, pmArgs, {
     cwd: root,
-    stdio: 'inherit',
+    stdio: "inherit",
   });
 
-  const hookPath = join(root, '.husky', 'pre-commit');
+  const hookPath = join(root, ".husky", "pre-commit");
   const hookBody = createHookFile(packageManager);
   const currentHook = await readHookIfExists(hookPath);
 
   if (currentHook !== hookBody) {
-    await mkdir(join(root, '.husky'), { recursive: true });
-    await writeFile(hookPath, hookBody, 'utf8');
+    await mkdir(join(root, ".husky"), { recursive: true });
+    await writeFile(hookPath, hookBody, "utf8");
   }
 
-  console.log('commit-quality-check is ready. The hook will run on every commit.');
+  console.log(
+    "commit-quality-check is ready. The hook will run on every commit.",
+  );
 }
 
 function createHookFile(packageManager) {
-  const { command: pmCommand, args } = getPackageManagerExecCommand(packageManager, ['cqc', 'c']);
-  const commandLine = [pmCommand, ...args].join(' ');
+  const { command: pmCommand, args } = getPackageManagerExecCommand(
+    packageManager,
+    ["cqc", "c"],
+  );
+  const commandLine = [pmCommand, ...args].join(" ");
 
   return `#!/usr/bin/env sh
 
@@ -78,9 +92,9 @@ ${commandLine}
 
 async function readHookIfExists(hookPath) {
   try {
-    return await readFile(hookPath, 'utf8');
+    return await readFile(hookPath, "utf8");
   } catch (error) {
-    if (error && error.code === 'ENOENT') {
+    if (error && error.code === "ENOENT") {
       return null;
     }
 

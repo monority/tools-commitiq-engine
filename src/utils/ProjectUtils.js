@@ -139,5 +139,5 @@ async function confirmInstall(packageManager, packages, reason) {
 }
 
 export async function restageFiles(files, root) {
-  await execa("git", ["add", "--", ...files], { cwd: root, stdio: "inherit" });
+  await execa("git", ["add", "-f", "--", ...files], { cwd: root, stdio: "inherit" });
 }

@@ -1,7 +1,8 @@
-// Test file for commit-quality-check
-const message = "Hello, World!";
-console.log(message);
+const unusedVar = "I am unused";
 
-function testFunction() {
-  return "Test";
+function test() {
+  console.log("Hello world");
 }
+
+// This is intentionally poorly formatted
+test();

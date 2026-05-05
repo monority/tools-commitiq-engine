@@ -25,7 +25,6 @@
     "quality"
   ],
   "dependencies": {
-    "commit-quality-check": "^1.0.5",
     "execa": "^9.5.2",
     "husky": "^9.1.6"
   },

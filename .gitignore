@@ -1,4 +1,9 @@
-node_modules
-output
+node_modules/
+dist/
+build/
+output/
+*.log
 *.tgz
 .tmp-*
+quality-report.md
+test-project/

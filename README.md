@@ -1,4 +1,11 @@
-# commit-quality-check
+<h1 align="center">
+Commit quality check
+</h1>
+
+
+<p align="center">
+  <img src="./logo-commit.png" />
+</p>
 
 Small CLI to keep commits clean before `git commit`.
 
@@ -96,7 +103,7 @@ pnpm exec cqc c
 
 ## Notes
 
-- `prettier` and `eslint` are skipped if they are not installed in the target project.
+- `prettier` and `eslint` are skipped if they are not installed in the target project. If a quality report is generated, it will provide the exact command to install them.
 - The package manager is auto-detected (`pnpm`, `npm`, `yarn`, `bun`).
 - If `gitQuality.scripts` is empty, common quality scripts are auto-detected.
 - Older `git-quality` references have been replaced by `commit-quality-check` and `cqc`.
