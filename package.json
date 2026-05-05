@@ -9,7 +9,7 @@
   },
   "files": [
     "scripts",
-    "cqc"
+    "src"
   ],
   "scripts": {
     "prepare": "husky"

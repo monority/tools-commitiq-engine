@@ -150,30 +150,45 @@ async function main() {
     switch (cmd) {
       case "enable":
       case "e":
+      case "1":
         await enableHook();
         break;
       case "disable":
       case "d":
+      case "2":
         await disableHook();
         break;
       case "status":
       case "st":
+      case "3":
         await showStatus();
         break;
       case "staged":
       case "s":
-        await runCheck({ generateReport: withReport, fullProfile: isFull });
+      case "4":
+        await runCheck({ generateReport: withReport, fullProfile: false });
         break;
       case "check":
       case "c":
-        await runCheck({ generateReport: withReport, fullProfile: isFull });
+      case "5":
+        await runCheck({ generateReport: withReport, fullProfile: true });
         break;
       case "quit":
       case "q":
+      case "6":
         console.log("Bye!");
+        process.exit(0);
+      case "menu":
+      case "m":
+      case "help":
+      case "h":
+      case undefined:
+        console.log(menuOpts);
+        console.log("Status:", hookOn ? "On" : "Off");
         process.exit(0);
       default:
         console.error("Unknown:", cmd);
+        console.log(menuOpts);
         process.exit(1);
     }
   }
