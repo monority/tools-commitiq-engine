@@ -2,7 +2,7 @@ import { BaseChecker } from "./BaseChecker.js";
 
 export class SecurityChecker extends BaseChecker {
   constructor() {
-    super("Security Audit");
+    super("Dependencies Vulnerabilities");
     this.profile = "fast";
   }
 

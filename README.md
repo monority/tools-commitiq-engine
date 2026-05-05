@@ -22,7 +22,7 @@
 - **Smart Dependency Suggestions**: If `eslint` or `prettier` are missing, the tool generates a report with the exact commands needed to install them.
 - **Flexible Commit Validation**: Supports both [Conventional Commits](https://www.conventionalcommits.org/) and [Gitmoji](https://gitmoji.dev/) (emoji-shortcodes like `:art:`) to keep your history clean.
 - **Secret Scanner**: Detects API keys, tokens, passwords before they get committed.
-- **Security Audit**: Runs `npm audit` to check for vulnerabilities.
+- **Dependencies Vulnerabilities**: Runs `npm audit` to check for vulnerabilities.
 - **Fast Performance**: Optimized for staged files to keep your development loop quick.
 - **Quality Reports**: Generates a detailed `quality-report.md` upon failure, explaining exactly what went wrong and how to fix it.
 - **Two Profiles**: `fast` (default) for quick checks, `full` for tests + playwright e2e.
@@ -86,7 +86,7 @@ When running `cqc check`, the tool runs these checkers:
 2. **Formatting (Prettier)**: Runs `prettier --write` on staged files.
 3. **Commit Message**: Validates format (Conventional or Gitmoji).
 4. **Secret Scanner**: Scans for API keys, tokens, passwords.
-5. **Security Audit**: Runs `npm audit` to check vulnerabilities.
+5. **Dependencies Vulnerabilities**: Runs `npm audit` to check vulnerabilities.
 6. **Test Suite**: Runs your test script (jest, vitest, etc.).
 7. **Playwright Tests** (full profile only): Runs e2e tests.
 
@@ -106,7 +106,7 @@ You can override the auto-detection by adding a `gitQuality` object to your `pac
 {
   "gitQuality": {
     "scripts": ["lint", "typecheck", "playwright"],
-    "skip": ["Secret Scanner", "Security Audit"],
+    "skip": ["Secret Scanner", "Dependencies Vulnerabilities"],
     "staged": {
       "prettier": true,
       "eslint": true
@@ -116,7 +116,7 @@ You can override the auto-detection by adding a `gitQuality` object to your `pac
 ```
 
 - `scripts`: An array of script names to execute during the check.
-- `skip`: An array of checker names to skip (e.g., `"Secret Scanner"`, `"Security Audit"`).
+- `skip`: An array of checker names to skip (e.g., `"Secret Scanner"`, `"Dependencies Vulnerabilities"`).
 - `staged.prettier`: Enable/disable automatic Prettier fixing on staged files.
 - `staged.eslint`: Enable/disable automatic ESLint fixing on staged files.
 

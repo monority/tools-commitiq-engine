@@ -123,7 +123,7 @@ export class QualityEngine {
         } else if (f.name.includes("Secret")) {
           content +=
             "- Remove secrets from files or add \`// cqc-disable secret\` comment.\n";
-        } else if (f.name.includes("Security")) {
+        } else if (f.name.includes("Vulnerabilities")) {
           content +=
             "- Run: \`npm audit fix\` to fix vulnerabilities.\n";
         }

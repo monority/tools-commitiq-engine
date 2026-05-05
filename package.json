@@ -39,6 +39,6 @@
     "node": ">=18"
   },
   "gitQuality": {
-    "skip": ["Security Audit", "Playwright Tests"]
+    "skip": ["Dependencies Vulnerabilities", "Playwright Tests"]
   }
 }
