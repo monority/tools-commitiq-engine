@@ -105,23 +105,30 @@ export class QualityEngine {
       content += "## 🛠 How to fix\n\n";
       failures.forEach((f) => {
         content += `### ${f.name}\n`;
-        if (f.suggestedFix) {
-          content += `- Run: \`${f.suggestedFix}\` to fix the missing dependency.\n`;
+        if (f.details) {
+          content += f.details + "\n\n";
+        } else if (f.suggestedFix) {
+          content += `- Run: \`${f.suggestedFix}\` to fix.\n`;
+        } else if (f.name.includes("Test")) {
+          content += `- Run: \`npm test\` to see test errors.\n`;
         } else if (f.name.includes("Linting")) {
           content +=
-            "- Try running: \`npm run lint --fix\` or your package manager equivalent.\n";
+            "- Run: \`npm run lint --fix\` or \`npm run lint:fix\` to fix.\n";
         } else if (f.name.includes("Formatting")) {
           content +=
-            "- Try running: \`npm run format\` or your package manager equivalent.\n";
+            "- Run: \`npm run format\` to fix formatting.\n";
         } else if (f.name.includes("Commit Message")) {
           content +=
-            "- Ensure your commit message follows the [Conventional Commits](https://www.conventionalcommits.org/) specification.\n";
-        } else {
-          content += `- Review the error message: \`${f.message}\` and fix the underlying issue.\n`;
+            "- Use format: \`feat: add feature\` or \`:emoji: message\`\n";
+        } else if (f.name.includes("Secret")) {
+          content +=
+            "- Remove secrets from files or add \`// cqc-disable secret\` comment.\n";
+        } else if (f.name.includes("Security")) {
+          content +=
+            "- Run: \`npm audit fix\` to fix vulnerabilities.\n";
         }
         content += "\n";
       });
-      content += "\n";
     }
 
     if (setupSuggestions.length > 0) {
