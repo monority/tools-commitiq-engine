@@ -41,17 +41,32 @@ pnpm add -D commit-quality-check husky prettier eslint && pnpm exec cqc i
 
 ## 🛠 Usage & Commands
 
-The CLI provides these commands:
+Run `cqc` or `node cqc` to show interactive menu:
+
+```
+╔════════════════════════════════════════╗
+║     Commit Quality Check       ║
+╠════════════════════════════════╣
+║  1) menu     Show this menu     ║
+║  2) enable  Enable hook        ║
+║  3) disable Disable hook       ║
+║  4) status  Show status        ║
+║  5) staged  Check staged       ║
+║  6) check   Full check         ║
+║  7) quit    Exit               ║
+╚════════════════════════════════╝
+```
+
+Or use direct commands:
 
 | Command | Alias | Description |
 | :--- | :--- | :--- |
-| `cqc menu` | `cqc m` | Show menu with all commands |
-| `cqc init` | `cqc i` | Install hook + initialize |
-| `cqc enable` | `cqc e` | Enable auto-check on commit |
-| `cqc disable` | `cqc d` | Disable auto-check |
-| `cqc status` | `cqc st` | Show hook status |
-| `cqc staged` | `cqc s` | Run checks on staged files |
-| `cqc check` | `cqc c` | Full quality check |
+| `cqc` or `cqc menu` | `1` | Show menu |
+| `cqc enable` | `2` | Enable auto-check |
+| `cqc disable` | `3` | Disable auto-check |
+| `cqc status` | `4` | Show hook status |
+| `cqc staged` | `5` | Check staged files |
+| `cqc check` | `6` | Full quality check |
 
 ##  How It Works
 

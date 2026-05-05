@@ -21,55 +21,62 @@ const menuOpts = `
 ╔════════════════════════════════════════╗
 ║     Commit Quality Check       ║
 ╠════════════════════════════════╣
-║  i init     Install hook     ║
-║  e enable  Enable hook     ║
-║  d disable Disable hook    ║
-║  s staged  Check staged    ║
-║  c check   Full check      ║
-║  status   Show status      ║
-║  menu     Show menu       ║
+║  1) menu     Show this menu     ║
+║  2) enable  Enable hook        ║
+║  3) disable Disable hook       ║
+║  4) status  Show status        ║
+║  5) staged  Check staged       ║
+║  6) check   Full check         ║
+║  7) quit    Exit               ║
 ╚════════════════════════════════╝
 `;
 
 switch (cmd) {
-  case "init":
-  case "i":
-    await initHook();
+  case "1":
+  case "menu":
+    console.log(menuOpts);
+    console.log("Status:", hookOn ? "On" : "Off");
     process.exit(0);
+  case "2":
   case "enable":
   case "e":
     await enableHook();
     process.exit(0);
+  case "3":
   case "disable":
   case "d":
     await disableHook();
     process.exit(0);
+  case "4":
   case "status":
   case "st":
     await showStatus();
     process.exit(0);
-  case "menu":
-  case "m":
-    console.log(menuOpts);
-    console.log("\nStatus:", hookOn ? "On" : "Off");
-    process.exit(0);
+  case "5":
   case "staged":
   case "s":
     await runCheck({ generateReport: withReport });
     process.exit(0);
+  case "6":
   case "check":
   case "c":
     await runCheck({ generateReport: withReport });
     process.exit(0);
+  case "7":
+  case "quit":
+  case "q":
+    console.log("Bye!");
+    process.exit(0);
   case "--help":
   case "-h":
   case "help":
+  case "m":
     console.log(menuOpts);
-    console.log("\nStatus:", hookOn ? "On" : "Off");
+    console.log("Status:", hookOn ? "On" : "Off");
     process.exit(0);
   case undefined:
     console.log(menuOpts);
-    console.log("\nStatus:", hookOn ? "On" : "Off");
+    console.log("Status:", hookOn ? "On" : "Off");
     process.exit(0);
   default:
     console.error("Unknown:", cmd);
