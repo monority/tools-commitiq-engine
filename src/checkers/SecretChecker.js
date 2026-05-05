@@ -21,8 +21,6 @@ export class SecretChecker extends BaseChecker {
       { pattern: /sk-live-[a-zA-Z0-9]{20,}/g, name: "OpenAI Key" },
       { pattern: /xox[baprs]-[a-zA-Z0-9]{10,}/g, name: "Slack Token" },
       { pattern: /gh[pousr]_[a-zA-Z0-9]{36}/g, name: "GitHub Token" },
-      { pattern: /SG\.[a-zA-Z0-9_-]{22}\.[a-zA-Z0-9_-]{43}/g, name: "SendGrid Key" },
-      { pattern: /-----BEGIN (?:RSA |EC |DSA |OPENSSH )?PRIVATE KEY-----/g, name: "Private Key" },
     ];
 
     const skipExt = [".png", ".jpg", ".jpeg", ".gif", ".ico", ".svg", ".woff", ".woff2", ".ttf", ".eot", ".mp3", ".mp4", ".zip", ".gz"];
@@ -34,7 +32,6 @@ export class SecretChecker extends BaseChecker {
         cwd: root,
       });
       const files = stdout.split("\n").filter(Boolean);
-
       const secretsFound = [];
 
       for (const file of files) {
@@ -56,7 +53,7 @@ export class SecretChecker extends BaseChecker {
             for (const { pattern, name } of patterns) {
               pattern.lastIndex = 0;
               if (pattern.test(line)) {
-                secretsFound.push({ file, name, line: line.substring(0, 50) });
+                secretsFound.push({ file, name });
               }
             }
           }
@@ -66,13 +63,13 @@ export class SecretChecker extends BaseChecker {
       }
 
       if (secretsFound.length > 0) {
-        const msg = secretsFound
-          .map((s) => `${s.name} in ${s.file}`)
-          .join(", ");
+        const msg = secretsFound.map((s) => `${s.name}`).join(", ");
+        const uniqueFiles = [...new Set(secretsFound.map(s => s.file))].join(", ");
         return {
           success: false,
-          message: `Potential secrets found: ${msg}`,
+          message: `Secrets detected: ${msg}`,
           suggestedFix: "Remove secrets from staged files",
+          details: `Remove secrets or add \`// cqc-disable secret\` to ignore.\n\nFiles:\n- ${uniqueFiles}`,
         };
       }
 

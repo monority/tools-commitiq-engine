@@ -58,15 +58,17 @@ export class BaseChecker {
   }
 
   getPackageManagerCommand(packageManager, args) {
+    const script = args[0] || "";
+    
     switch (packageManager) {
       case "pnpm":
-        return { command: "pnpm", args: ["exec", ...args] };
+        return { command: "pnpm", args: ["run", script] };
       case "yarn":
-        return { command: "yarn", args: ["exec", ...args] };
+        return { command: "yarn", args: [script] };
       case "bun":
-        return { command: "bunx", args };
+        return { command: "bun", args: ["run", script] };
       default:
-        return { command: "npm", args: ["exec", "--", ...args] };
+        return { command: "npm", args: ["run", script] };
     }
   }
 

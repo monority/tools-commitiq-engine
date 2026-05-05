@@ -7,24 +7,22 @@ export class SecurityChecker extends BaseChecker {
   }
 
   async run(context) {
-    const { root, packageManager } = context;
+    const { packageManager } = context;
+    const pm = packageManager || "npm";
+    
+    const result = await this.exec(context, [pm, "audit"]);
 
-    const command =
-      packageManager === "npm"
-        ? "npm audit"
-        : packageManager === "pnpm"
-          ? "pnpm audit"
-          : packageManager === "yarn"
-            ? "yarn audit"
-            : "npm audit";
+    if (!result.success) {
+      const err = result.stdout || result.stderr || "";
+      const lines = err.split("\n").slice(0, 15).join("\n");
+      return {
+        success: false,
+        message: "Vulnerabilities found",
+        suggestedFix: `${pm} audit fix`,
+        details: `Run \`${pm} audit fix\` to fix.\n\n${lines}`,
+      };
+    }
 
-    const result = await this.exec(context, command.split(" "));
-
-    return {
-      success: result.success,
-      message: result.success
-        ? "No critical security vulnerabilities found"
-        : `Security vulnerabilities detected: ${result.stderr}`,
-    };
+    return { success: true, message: "No vulnerabilities found" };
   }
 }

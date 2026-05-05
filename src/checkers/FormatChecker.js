@@ -8,7 +8,7 @@ export class FormatChecker extends BaseChecker {
   }
 
   async run(context) {
-    const { root, config } = context;
+    const { config } = context;
     if (!config.staged.prettier)
       return { success: true, message: "Skipped by config" };
 
@@ -16,8 +16,8 @@ export class FormatChecker extends BaseChecker {
     if (!depCheck.installed) {
       return {
         success: true,
-        message: "Skipped: Prettier not installed",
-        suggestedFix: depCheck.command,
+        message: "Skipped: Prettier not found",
+        suggestedFix: "npm install --save-dev prettier",
       };
     }
 
@@ -25,7 +25,7 @@ export class FormatChecker extends BaseChecker {
     const formatFiles = files.filter((f) => this.isFormattable(f));
 
     if (formatFiles.length === 0)
-      return { success: true, message: "No formattable files staged" };
+      return { success: true, message: "No formatable files staged" };
 
     const result = await this.exec(context, [
       "prettier",
@@ -33,24 +33,17 @@ export class FormatChecker extends BaseChecker {
       ...formatFiles,
     ]);
 
-    return {
-      success: result.success,
-      message: result.success ? "Formatting passed" : result.stderr,
-      fixed: true,
-    };
-  }
+    if (!result.success) {
+      const err = result.stderr || result.stdout || "";
+      return {
+        success: false,
+        message: "Formatting issues found",
+        suggestedFix: "npm run format",
+        details: `Run \`npm run format\` to format files.\n\n${err}`,
+      };
+    }
 
-  async getStagedFiles(context) {
-    const { root, execa } = context;
-    const { stdout } = await execa(
-      "git",
-      ["diff", "--cached", "--name-only", "--diff-filter=ACMR"],
-      { cwd: root },
-    );
-    return stdout
-      .split("\n")
-      .map((f) => f.trim())
-      .filter(Boolean);
+    return { success: true, message: "Formatting passed" };
   }
 
   isFormattable(file) {

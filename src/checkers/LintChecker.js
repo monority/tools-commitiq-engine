@@ -16,8 +16,8 @@ export class LintChecker extends BaseChecker {
     if (!depCheck.installed) {
       return {
         success: true,
-        message: "Skipped: ESLint not installed",
-        suggestedFix: depCheck.command,
+        message: "Skipped: ESLint not found",
+        suggestedFix: `npm install --save-dev eslint eslint-config-prettier`,
       };
     }
 
@@ -25,15 +25,22 @@ export class LintChecker extends BaseChecker {
     const lintFiles = files.filter((f) => this.isLintable(f));
 
     if (lintFiles.length === 0)
-      return { success: true, message: "No lintable files staged" };
+      return { success: true, message: "No JS/TS files staged" };
 
     const result = await this.exec(context, ["eslint", "--fix", ...lintFiles]);
 
-    return {
-      success: result.success,
-      message: result.success ? "Linting passed" : result.stderr,
-      fixed: true,
-    };
+    if (!result.success) {
+      const err = result.stderr || "";
+      const lines = err.split("\n").slice(0, 15).join("\n");
+      return {
+        success: false,
+        message: "ESLint errors found",
+        suggestedFix: "npm run lint:fix",
+        details: `Run \`npm run lint:fix\` to auto-fix.\n\nErrors:\n${lines}`,
+      };
+    }
+
+    return { success: true, message: "Linting passed" };
   }
 
   isLintable(file) {
