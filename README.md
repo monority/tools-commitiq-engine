@@ -93,6 +93,7 @@ You can override the auto-detection by adding a `gitQuality` object to your `pac
 {
   "gitQuality": {
     "scripts": ["lint", "typecheck", "playwright"],
+    "skip": ["Secret Scanner", "Security Audit"],
     "staged": {
       "prettier": true,
       "eslint": true
@@ -102,8 +103,17 @@ You can override the auto-detection by adding a `gitQuality` object to your `pac
 ```
 
 - `scripts`: An array of script names to execute during the check.
+- `skip`: An array of checker names to skip (e.g., `"Secret Scanner"`, `"Security Audit"`).
 - `staged.prettier`: Enable/disable automatic Prettier fixing on staged files.
 - `staged.eslint`: Enable/disable automatic ESLint fixing on staged files.
+
+### Ignoring Secrets
+
+To ignore secrets in specific lines, add a comment:
+```js
+// cqc-disable secret
+const mySecret = "sk-123456"; // won't trigger warning
+```
 
 ##  Quality Reports
 

@@ -51,10 +51,18 @@ export class QualityEngine {
     for (const checker of this.checkers) {
       if (this.shouldRunChecker(checker, profile)) {
         console.log(`🔍 Running ${checker.name}...`);
-        const result = await checker.run(context);
-        results.push({ name: checker.name, ...result });
-        if (!result.success) {
-          console.error(`❌ ${checker.name} failed: ${result.message}`);
+        try {
+          const result = await checker.run(context);
+          results.push({ name: checker.name, ...result });
+          if (!result.success) {
+            console.error(`❌ ${checker.name} failed: ${result.message}`);
+            if (result.suggestedFix) {
+              console.error(`💡 Fix: ${result.suggestedFix}`);
+            }
+          }
+        } catch (error) {
+          results.push({ name: checker.name, success: false, message: error.message });
+          console.error(`❌ ${checker.name} error: ${error.message}`);
         }
       }
     }
@@ -138,6 +146,8 @@ export class QualityEngine {
 
   shouldRunChecker(checker, profile) {
     const p = profile || this.profile || "fast";
+    const skipped = this.config.skip || [];
+    if (skipped.includes(checker.name)) return false;
     if (p === "full") return true;
     return checker.profile === "fast" || !checker.profile;
   }
@@ -180,6 +190,7 @@ export class QualityEngine {
         eslint: config.staged?.eslint ?? true,
       },
       scripts: config.scripts || [],
+      skip: config.skip || [],
     };
   }
 }

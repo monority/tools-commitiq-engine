@@ -22,9 +22,12 @@ export class SecretChecker extends BaseChecker {
       { pattern: /xox[baprs]-[a-zA-Z0-9]{10,}/g, name: "Slack Token" },
       { pattern: /gh[pousr]_[a-zA-Z0-9]{36}/g, name: "GitHub Token" },
       { pattern: /SG\.[a-zA-Z0-9_-]{22}\.[a-zA-Z0-9_-]{43}/g, name: "SendGrid Key" },
+      { pattern: /-----BEGIN (?:RSA |EC |DSA |OPENSSH )?PRIVATE KEY-----/g, name: "Private Key" },
     ];
 
     const skipExt = [".png", ".jpg", ".jpeg", ".gif", ".ico", ".svg", ".woff", ".woff2", ".ttf", ".eot", ".mp3", ".mp4", ".zip", ".gz"];
+    const ignoreFiles = ["README.md", "CHANGELOG.md"];
+    const ignoreComments = ["cqc-disable", "no-scan"];
 
     try {
       const { stdout } = await execa("git", ["diff", "--cached", "--name-only"], {
@@ -35,6 +38,8 @@ export class SecretChecker extends BaseChecker {
       const secretsFound = [];
 
       for (const file of files) {
+        if (ignoreFiles.includes(file)) continue;
+        
         const ext = file.includes(".") ? "." + file.split(".").pop() : "";
         if (skipExt.includes(ext.toLowerCase())) continue;
 
@@ -42,11 +47,17 @@ export class SecretChecker extends BaseChecker {
           const { stdout: content } = await execa("git", ["show", `:0:${file}`], {
             cwd: root,
           });
+          
+          const lines = content.split("\n");
+          for (const line of lines) {
+            const ignoreLine = ignoreComments.some(c => line.includes(c));
+            if (ignoreLine) continue;
 
-          for (const { pattern, name } of patterns) {
-            pattern.lastIndex = 0;
-            if (pattern.test(content)) {
-              secretsFound.push({ file, name });
+            for (const { pattern, name } of patterns) {
+              pattern.lastIndex = 0;
+              if (pattern.test(line)) {
+                secretsFound.push({ file, name, line: line.substring(0, 50) });
+              }
             }
           }
         } catch {
