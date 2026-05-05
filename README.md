@@ -41,13 +41,17 @@ pnpm add -D commit-quality-check husky prettier eslint && pnpm exec cqc i
 
 ## 🛠 Usage & Commands
 
-The CLI provides short aliases for common operations:
+The CLI provides these commands:
 
 | Command | Alias | Description |
 | :--- | :--- | :--- |
-| `pnpm exec cqc init` | `cqc i` | Initializes the tool and sets up Git hooks. |
-| `pnpm exec cqc staged` | `cqc s` | Runs quality checks specifically on staged files. |
-| `pnpm exec cqc check` | `cqc c` | Full quality check suite. |
+| `cqc menu` | `cqc m` | Show menu with all commands |
+| `cqc init` | `cqc i` | Install hook + initialize |
+| `cqc enable` | `cqc e` | Enable auto-check on commit |
+| `cqc disable` | `cqc d` | Disable auto-check |
+| `cqc status` | `cqc st` | Show hook status |
+| `cqc staged` | `cqc s` | Run checks on staged files |
+| `cqc check` | `cqc c` | Full quality check |
 
 ##  How It Works
 
