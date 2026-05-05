@@ -1,6 +1,7 @@
 import { BaseChecker } from "./BaseChecker.js";
 import { join } from "node:path";
 import { readFileSync, existsSync } from "node:fs";
+import { execa } from "execa";
 
 export class CommitMsgChecker extends BaseChecker {
   constructor() {
@@ -21,10 +22,16 @@ export class CommitMsgChecker extends BaseChecker {
       message = readFileSync(commitMsgPath, "utf8").trim();
     }
 
-    console.error("[DEBUG] CommitMsgChecker - root:", root);
-    console.error("[DEBUG] COMMIT_EDITMSG exists:", existsSync(commitMsgPath));
-    console.error("[DEBUG] .git/msg exists:", existsSync(gitMsgPath));
-    console.error("[DEBUG] message read:", JSON.stringify(message));
+    if (!message) {
+      try {
+        const { stdout } = await execa("git", ["diff", "--cached", "-z", "--pretty=format:%B"], {
+          cwd: root,
+        });
+        message = stdout.trim();
+      } catch {}
+    }
+
+    if (!message)
       return { success: true, message: "No commit message found" };
 
     const conventionalRegex =
