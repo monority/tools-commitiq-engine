@@ -4,7 +4,7 @@ Commit quality check
 
 
 <p align="center">
-  <img src="./logo-convert.png" />
+  <img src="./logo-convert.webp" />
 </p>
 
 Small CLI to keep commits clean before `git commit`.
