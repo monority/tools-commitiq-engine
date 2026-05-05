@@ -1,85 +1,74 @@
 <h1 align="center">
-Commit quality check
+  Commit Quality Check
 </h1>
 
-
 <p align="center">
-  <img src="./logo-convert.webp" />
+  <img src="./logo-commit.png" alt="Commit Quality Check Logo" />
 </p>
 
-Small CLI to keep commits clean before `git commit`.
+<p align="center">
+  <strong>A powerful, zero-config CLI to ensure your commits meet quality standards before they hit the repository.</strong>
+</p>
 
-## Quick install
+---
+
+## 🌟 Overview
+
+`commit-quality-check` (cqc) is a lightweight tool designed to be integrated into your Git workflow (ideally via Husky) to prevent "dirty" commits. It automates linting, formatting, and custom quality checks, ensuring that only high-quality code is committed.
+
+## ✨ Features
+
+- 🚀 **Zero Configuration**: Auto-detects your package manager (`npm`, `pnpm`, `yarn`, `bun`) and common quality scripts.
+- 🛠 **Smart Dependency Suggestions**: If `eslint` or `prettier` are missing, the tool generates a report with the exact commands needed to install them.
+- ✍️ **Flexible Commit Validation**: Supports both [Conventional Commits](https://www.conventionalcommits.org/) and [Gitmoji](https://gitmoji.dev/) (emoji-shortcodes like `:art:`) to keep your history clean.
+- ⚡ **Fast Performance**: Optimized for staged files to keep your development loop quick.
+- 📊 **Quality Reports**: Generates a detailed `quality-report.md` upon failure, explaining exactly what went wrong and how to fix it.
+
+## 📦 Installation
+
+### Quick Start (pnpm)
+Install the tool along with the recommended base dependencies:
 
 ```bash
 pnpm add -D commit-quality-check husky prettier eslint
 pnpm exec cqc i
 ```
 
-One-liner for a `pnpm` project:
-
+### One-liner for pnpm projects
 ```bash
 pnpm add -D commit-quality-check husky prettier eslint && pnpm exec cqc i
 ```
 
-## Short commands
+## 🛠 Usage & Commands
 
-```text
-cqc i  -> init
-cqc s  -> staged
-cqc c  -> check
-```
+The CLI provides short aliases for common operations:
 
-The long commands still work too:
+| Command | Alias | Description |
+| :--- | :--- | :--- |
+| `pnpm exec cqc init` | `cqc i` | Initializes the tool and sets up Git hooks. |
+| `pnpm exec cqc staged` | `cqc s` | Runs quality checks specifically on staged files. |
+| `pnpm exec cqc check` | `cqc c` | Full quality check suite. |
 
-```bash
-pnpm exec cqc init
-pnpm exec cqc staged
-pnpm exec cqc check
-```
+## ⚙️ How It Works
 
-## What the hook does
+When running `cqc c`, the tool performs the following steps:
+1. **Auto-Formatting**: Runs `prettier --write` on compatible staged files.
+2. **Auto-Linting**: Runs `eslint --fix` on staged JS/TS files.
+3. **Re-staging**: Automatically adds the fixed files back to the Git index.
+4. **Quality Suite**: Executes project-specific scripts (tests, type-checks, etc.).
+5. **Validation**: Checks the commit message format.
 
-`cqc c`:
+### Auto-detected Scripts
+If no custom configuration is provided, `cqc` looks for these scripts in your `package.json` (in order):
+- `lint`
+- `typecheck` | `check-types` | `types`
+- `test:unit` | `unit`
+- `test` | `test:ci`
+- `test:e2e` | `e2e` | `playwright` | `test:playwright`
 
-1. runs `prettier --write` on compatible staged files
-2. runs `eslint --fix` on staged JS and TS files
-3. re-stages updated files
-4. runs project quality scripts when they exist
+## 🛠 Configuration
 
-## Auto-detected scripts
-
-Without any config, `cqc c` looks for these scripts in this order:
-
-```text
-lint
-typecheck | check-types | types
-test:unit | unit
-test | test:ci
-test:e2e | e2e | playwright | test:playwright
-```
-
-Example:
-
-```json
-{
-  "scripts": {
-    "lint": "eslint .",
-    "typecheck": "tsc --noEmit",
-    "playwright": "playwright test"
-  }
-}
-```
-
-Then a single command runs everything that exists:
-
-```bash
-pnpm exec cqc c
-```
-
-## Optional config
-
-Add `gitQuality` in the consumer project's `package.json` if you want to force an exact script list:
+You can override the auto-detection by adding a `gitQuality` object to your `package.json`:
 
 ```json
 {
@@ -93,22 +82,19 @@ Add `gitQuality` in the consumer project's `package.json` if you want to force a
 }
 ```
 
-## Commands
+- `scripts`: An array of script names to execute during the check.
+- `staged.prettier`: Enable/disable automatic Prettier fixing on staged files.
+- `staged.eslint`: Enable/disable automatic ESLint fixing on staged files.
 
-```bash
-pnpm exec cqc i
-pnpm exec cqc s
-pnpm exec cqc c
-```
+## 📊 Quality Reports
 
-## Notes
+When a check fails or a dependency is missing, a `quality-report.md` is generated in the project root. This report includes:
+- **Results Table**: A summary of which checks passed, failed, or were skipped.
+- **How to Fix**: Step-by-step instructions for fixing failed quality checks.
+- **Setup Suggestions**: Direct installation commands if recommended tools (like ESLint) are not found.
 
-- `prettier` and `eslint` are skipped if they are not installed in the target project. If a quality report is generated, it will provide the exact command to install them.
-- The package manager is auto-detected (`pnpm`, `npm`, `yarn`, `bun`).
-- If `gitQuality.scripts` is empty, common quality scripts are auto-detected.
-- Older `git-quality` references have been replaced by `commit-quality-check` and `cqc`.
+---
 
+## 🔗 Repository
 
-## Repo
-
-[https://github.com/monority/commit-quality-check/]
+[https://github.com/monority/commit-quality-check/](https://github.com/monority/commit-quality-check/)
