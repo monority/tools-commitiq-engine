@@ -41,7 +41,7 @@ pnpm add -D commit-quality-check husky prettier eslint && pnpm exec cqc i
 
 ## 🛠 Usage & Commands
 
-Run `cqc` or `node cqc` to show interactive menu:
+Run or `node cqc` to show interactive menu:
 
 ```
 ╔════════════════════════════════════════╗

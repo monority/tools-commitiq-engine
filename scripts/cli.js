@@ -11,9 +11,8 @@ import {
 } from "../src/utils/ProjectUtils.js";
 import { runCheck } from "./quality-staged.js";
 import { readFileSync, existsSync } from "node:fs";
+import { createInterface } from "node:readline";
 
-const cmd = process.argv[2];
-const withReport = process.argv.includes("--report");
 const projRoot = await getProjectRoot();
 const hookOn = existsSync(join(projRoot, ".husky", "pre-commit"));
 
@@ -21,67 +20,68 @@ const menuOpts = `
 ╔════════════════════════════════════════╗
 ║     Commit Quality Check       ║
 ╠════════════════════════════════╣
-║  1) menu     Show this menu     ║
-║  2) enable  Enable hook        ║
-║  3) disable Disable hook       ║
-║  4) status  Show status        ║
-║  5) staged  Check staged       ║
-║  6) check   Full check         ║
-║  7) quit    Exit               ║
+║  1) enable  Enable hook        ║
+║  2) disable Disable hook       ║
+║  3) status  Show status        ║
+║  4) staged  Check staged       ║
+║  5) check   Full check         ║
+║  6) quit    Exit               ║
 ╚════════════════════════════════╝
 `;
 
-switch (cmd) {
-  case "1":
-  case "menu":
-    console.log(menuOpts);
-    console.log("Status:", hookOn ? "On" : "Off");
-    process.exit(0);
-  case "2":
-  case "enable":
-  case "e":
-    await enableHook();
-    process.exit(0);
-  case "3":
-  case "disable":
-  case "d":
-    await disableHook();
-    process.exit(0);
-  case "4":
-  case "status":
-  case "st":
-    await showStatus();
-    process.exit(0);
-  case "5":
-  case "staged":
-  case "s":
-    await runCheck({ generateReport: withReport });
-    process.exit(0);
-  case "6":
-  case "check":
-  case "c":
-    await runCheck({ generateReport: withReport });
-    process.exit(0);
-  case "7":
-  case "quit":
-  case "q":
-    console.log("Bye!");
-    process.exit(0);
-  case "--help":
-  case "-h":
-  case "help":
-  case "m":
-    console.log(menuOpts);
-    console.log("Status:", hookOn ? "On" : "Off");
-    process.exit(0);
-  case undefined:
-    console.log(menuOpts);
-    console.log("Status:", hookOn ? "On" : "Off");
-    process.exit(0);
-  default:
-    console.error("Unknown:", cmd);
-    console.log(menuOpts);
-    process.exit(1);
+const rl = createInterface({
+  input: process.stdin,
+  output: process.stdout,
+});
+
+function ask(question) {
+  return new Promise((resolve) => rl.question(question, resolve));
+}
+
+async function showMenu() {
+  console.clear();
+  console.log(`\n${menuOpts}`);
+  console.log("Status:", hookOn ? "✅ On" : "❌ Off");
+  const answer = await ask("\n👉 Choose option: ");
+  return answer.trim();
+}
+
+async function handleChoice(choice) {
+  try {
+    switch (choice) {
+      case "1":
+      case "enable":
+        await enableHook();
+        break;
+      case "2":
+      case "disable":
+        await disableHook();
+        break;
+      case "3":
+      case "status":
+        await showStatus();
+        break;
+      case "4":
+      case "staged":
+        await runCheck({ generateReport: false });
+        break;
+      case "5":
+      case "check":
+        await runCheck({ generateReport: false });
+        break;
+      case "6":
+      case "quit":
+      case "q":
+        console.log("👋 Bye!");
+        rl.close();
+        process.exit(0);
+      default:
+        console.log("❌ Invalid option");
+    }
+    await ask("\nPress Enter to continue...");
+  } catch (e) {
+    // ignore readline errors in pipe mode
+  }
 }
 
 async function initHook() {
@@ -109,22 +109,74 @@ async function enableHook() {
   const body = makeHook();
   try { await mkdir(join(projRoot, ".husky"), { recursive: true }); } catch {}
   await writeFile(p, body, "utf8");
-  console.log("Hook enabled");
+  console.log("✅ Hook enabled");
 }
 
 async function disableHook() {
   const p = join(projRoot, ".husky", "pre-commit");
-  try { await unlink(p); console.log("Hook disabled"); }
+  try { await unlink(p); console.log("✅ Hook disabled"); }
   catch (e) { console.log(e.code === "ENOENT" ? "Already off" : "Error"); }
 }
 
 async function showStatus() {
-  console.log("Auto-check:", hookOn ? "On" : "Off");
-  console.log("Root:", projRoot);
+  console.clear();
+  console.log("╔════════════════════════════════════╗");
+  console.log("║     Commit Quality Check          ║");
+  console.log("╠════════════════════════════════╣");
+  console.log(`║  Auto-check: ${hookOn ? "✅ On" : "❌ Off".padEnd(26)}║`);
+  console.log(`║  Root: ${projRoot.substring(0, 28).padEnd(28)}║`);
+  console.log("╚════════════════════════════════════╝");
 }
 
 function makeHook() {
   return `#!/usr/bin/env sh
-npm exec -- cqc c
+# Run from project root
+cd "\$(git rev-parse --show-toplevel)" && npm exec -- cqc check
 `;
 }
+
+async function main() {
+  if (!process.argv[2]) {
+    while (true) {
+      const choice = await showMenu();
+      if (!choice) continue;
+      await handleChoice(choice);
+    }
+  } else {
+    const cmd = process.argv[2];
+    const withReport = process.argv.includes("--report");
+    
+    switch (cmd) {
+      case "enable":
+      case "e":
+        await enableHook();
+        break;
+      case "disable":
+      case "d":
+        await disableHook();
+        break;
+      case "status":
+      case "st":
+        await showStatus();
+        break;
+      case "staged":
+      case "s":
+        await runCheck({ generateReport: withReport });
+        break;
+      case "check":
+      case "c":
+        await runCheck({ generateReport: withReport });
+        break;
+      case "quit":
+      case "q":
+        console.log("Bye!");
+        process.exit(0);
+      default:
+        console.error("Unknown:", cmd);
+        process.exit(1);
+    }
+  }
+  rl.close();
+}
+
+main();
