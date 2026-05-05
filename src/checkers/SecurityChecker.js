@@ -7,22 +7,41 @@ export class SecurityChecker extends BaseChecker {
   }
 
   async run(context) {
-    const { packageManager } = context;
+    const { packageManager, root, execa } = context;
     const pm = packageManager || "npm";
     
-    const result = await this.exec(context, [pm, "audit"]);
-
-    if (!result.success) {
-      const err = result.stdout || result.stderr || "";
+    try {
+      const { stdout, stderr } = await execa(pm, ["audit"], {
+        cwd: root,
+        stdio: "pipe",
+      });
+      
+      const output = stdout || stderr || "";
+      const hasVulns = output.includes("vulnerabilities") && !output.includes("0 vulnerabilities");
+      
+      if (hasVulns) {
+        const lines = output.split("\n").slice(0, 15).join("\n");
+        return {
+          success: false,
+          message: "Vulnerabilities found",
+          suggestedFix: `${pm} audit fix`,
+          details: `Run \`${pm} audit fix\` to fix.\n\n${lines}`,
+        };
+      }
+      
+      return { success: true, message: "No vulnerabilities found" };
+    } catch (error) {
+      const err = error.stderr || error.message || "";
       const lines = err.split("\n").slice(0, 15).join("\n");
-      return {
-        success: false,
-        message: "Vulnerabilities found",
-        suggestedFix: `${pm} audit fix`,
-        details: `Run \`${pm} audit fix\` to fix.\n\n${lines}`,
-      };
+      if (lines.includes("vulnerabilities")) {
+        return {
+          success: false,
+          message: "Vulnerabilities found",
+          suggestedFix: `${pm} audit fix`,
+          details: `Run \`${pm} audit fix\` to fix.\n\n${lines}`,
+        };
+      }
+      return { success: true, message: "No vulnerabilities found" };
     }
-
-    return { success: true, message: "No vulnerabilities found" };
   }
 }
