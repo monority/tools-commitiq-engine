@@ -29,47 +29,47 @@
 
 ##  Installation
 
-### Quick Start (pnpm)
-Install the tool along with the recommended base dependencies:
+### Quick Start
+Install the tool and enable the hook:
 
 ```bash
-pnpm add -D commit-quality-check husky prettier eslint
-pnpm exec cqc i
+npm install --save-dev commit-quality-check husky
+npx cqc enable
 ```
 
-### One-liner for pnpm projects
+Or with pnpm:
 ```bash
-pnpm add -D commit-quality-check husky prettier eslint && pnpm exec cqc i
+pnpm add -D commit-quality-check husky
+pnpm exec cqc enable
 ```
 
 ## 🛠 Usage & Commands
 
-Run `node cqc` (or just `cqc` if installed) to show interactive menu:
+Run `npx cqc` to show interactive menu (arrow keys + enter):
 
 ```
-╔════════════════════════════════════════╗
-║     Commit Quality Check       ║
-╠════════════════════════════════╣
-║  1) enable  Enable hook        ║
-║  2) disable Disable hook       ║
-║  3) status  Show status        ║
-║  4) staged  Check staged       ║
-║  5) check   Full check (+e2e)  ║
-║  6) quit    Exit               ║
-╚════════════════════════════════╝
+━━━ COMMIT QUALITY CHECK ━━━
+
+  ▶ Enable hook
+    Disable hook
+    Status
+    Staged check
+    Full check
+    Quit
+
+↑↓ Select  ENTER Confirm  Q Quit
 ```
 
 Or use direct commands:
 
 | Command | Alias | Description |
 | :--- | :--- | :--- |
-| `node cqc` | - | Interactive menu |
-| `node cqc enable` | `e` or `2` | Enable auto-check |
-| `node cqc disable` | `d` or `3` | Disable auto-check |
-| `node cqc status` | `st` or `4` | Show hook status |
-| `node cqc staged` | `s` or `5` | Fast check (staged files) |
-| `node cqc check` | `c` or `6` | Full check + playwright |
-| `node cqc check --full` | - | Same as check |
+| `npx cqc` | - | Interactive menu |
+| `npx cqc enable` | `e` | Enable auto-check |
+| `npx cqc disable` | `d` | Disable auto-check |
+| `npx cqc status` | `s` | Show status |
+| `npx cqc staged` | `f` | Fast check (staged) |
+| `npx cqc check` | `c` | Full check + e2e |
 
 ### Using as Git Hook
 
