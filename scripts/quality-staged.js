@@ -1,3 +1,6 @@
+import { fileURLToPath } from "node:url";
+import { dirname } from "node:path";
+
 import { createQualityEngine } from "../src/index.js";
 import {
   getProjectRoot,
@@ -65,15 +68,11 @@ export async function runCheck(options = {}) {
   }
 }
 
-import { fileURLToPath } from "node:url";
-import { dirname } from "node:path";
+// FIX: prevent auto-run on import (ESM bug - argv[1] matches during import)
+const isDirectRun = process.argv[1] && 
+  process.argv[1].endsWith('quality-staged.js');
 
-// If run directly
-if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
-  runCheck();
-} else if (process.argv[1] && dirname(fileURLToPath(import.meta.url)) === dirname(process.argv[1])) {
-  // This handles cases where the script is called via a different path format
-  runCheck();
-} else if (process.argv[1]?.endsWith('quality-staged.js')) {
+if (isDirectRun) {
+  console.error("[DEBUG] Called directly");
   runCheck();
 }
