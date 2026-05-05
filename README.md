@@ -21,8 +21,11 @@
 - **Zero Configuration**: Auto-detects your package manager (`npm`, `pnpm`, `yarn`, `bun`) and common quality scripts.
 - **Smart Dependency Suggestions**: If `eslint` or `prettier` are missing, the tool generates a report with the exact commands needed to install them.
 - **Flexible Commit Validation**: Supports both [Conventional Commits](https://www.conventionalcommits.org/) and [Gitmoji](https://gitmoji.dev/) (emoji-shortcodes like `:art:`) to keep your history clean.
--  **Fast Performance**: Optimized for staged files to keep your development loop quick.
+- **Secret Scanner**: Detects API keys, tokens, passwords before they get committed.
+- **Security Audit**: Runs `npm audit` to check for vulnerabilities.
+- **Fast Performance**: Optimized for staged files to keep your development loop quick.
 - **Quality Reports**: Generates a detailed `quality-report.md` upon failure, explaining exactly what went wrong and how to fix it.
+- **Two Profiles**: `fast` (default) for quick checks, `full` for tests + playwright e2e.
 
 ##  Installation
 
@@ -41,19 +44,18 @@ pnpm add -D commit-quality-check husky prettier eslint && pnpm exec cqc i
 
 ## 🛠 Usage & Commands
 
-Run or `node cqc` to show interactive menu:
+Run `node cqc` (or just `cqc` if installed) to show interactive menu:
 
 ```
 ╔════════════════════════════════════════╗
 ║     Commit Quality Check       ║
 ╠════════════════════════════════╣
-║  1) menu     Show this menu     ║
-║  2) enable  Enable hook        ║
-║  3) disable Disable hook       ║
-║  4) status  Show status        ║
-║  5) staged  Check staged       ║
-║  6) check   Full check         ║
-║  7) quit    Exit               ║
+║  1) enable  Enable hook        ║
+║  2) disable Disable hook       ║
+║  3) status  Show status        ║
+║  4) staged  Check staged       ║
+║  5) check   Full check (+e2e)  ║
+║  6) quit    Exit               ║
 ╚════════════════════════════════╝
 ```
 
@@ -61,21 +63,32 @@ Or use direct commands:
 
 | Command | Alias | Description |
 | :--- | :--- | :--- |
-| `cqc` or `cqc menu` | `1` | Show menu |
-| `cqc enable` | `2` | Enable auto-check |
-| `cqc disable` | `3` | Disable auto-check |
-| `cqc status` | `4` | Show hook status |
-| `cqc staged` | `5` | Check staged files |
-| `cqc check` | `6` | Full quality check |
+| `node cqc` | - | Interactive menu |
+| `node cqc enable` | `e` or `2` | Enable auto-check |
+| `node cqc disable` | `d` or `3` | Disable auto-check |
+| `node cqc status` | `st` or `4` | Show hook status |
+| `node cqc staged` | `s` or `5` | Fast check (staged files) |
+| `node cqc check` | `c` or `6` | Full check + playwright |
+| `node cqc check --full` | - | Same as check |
+
+### Using as Git Hook
+
+After enabling, the hook runs automatically on every `git commit`. To bypass (if needed):
+```bash
+git commit --no-verify -m "feat: ..."
+```
 
 ##  How It Works
 
-When running `cqc c`, the tool performs the following steps:
-1. **Auto-Formatting**: Runs `prettier --write` on compatible staged files.
-2. **Auto-Linting**: Runs `eslint --fix` on staged JS/TS files.
-3. **Re-staging**: Automatically adds the fixed files back to the Git index.
-4. **Quality Suite**: Executes project-specific scripts (tests, type-checks, etc.).
-5. **Validation**: Checks the commit message format.
+When running `cqc check`, the tool runs these checkers:
+
+1. **Linting (ESLint)**: Runs `eslint --fix` on staged JS/TS files.
+2. **Formatting (Prettier)**: Runs `prettier --write` on staged files.
+3. **Commit Message**: Validates format (Conventional or Gitmoji).
+4. **Secret Scanner**: Scans for API keys, tokens, passwords.
+5. **Security Audit**: Runs `npm audit` to check vulnerabilities.
+6. **Test Suite**: Runs your test script (jest, vitest, etc.).
+7. **Playwright Tests** (full profile only): Runs e2e tests.
 
 ### Auto-detected Scripts
 If no custom configuration is provided, `cqc` looks for these scripts in your `package.json` (in order):
@@ -126,4 +139,4 @@ When a check fails or a dependency is missing, a `quality-report.md` is generate
 
 ## Repository
 
-[https://github.com/monority/commit-quality-check/](https://github.com/monority/commit-quality-check/)
+[https://github.com/monority/tools-commit-quality-check](https://github.com/monority/tools-commit-quality-check)
