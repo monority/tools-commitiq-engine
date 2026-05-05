@@ -1,6 +1,6 @@
 {
   "name": "commit-quality-check",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "description": "Pre-commit quality checks for staged files and project scripts.",
   "type": "module",
   "main": "scripts/cli.js",
@@ -39,6 +39,9 @@
     "node": ">=18"
   },
   "gitQuality": {
-    "skip": ["Dependencies Vulnerabilities", "Playwright Tests"]
+    "skip": [
+      "Dependencies Vulnerabilities",
+      "Playwright Tests"
+    ]
   }
 }
