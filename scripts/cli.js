@@ -79,7 +79,7 @@ async function navigate() {
 async function main() {
   const cmd = process.argv[2];
   
-  if (cmd) {
+  if (cmd && cmd !== "menu" && cmd !== "m") {
     const opt = options.find(o => o.action === cmd || o.key === cmd);
     if (opt) {
       if (opt.action === "enable") await enableHook();
