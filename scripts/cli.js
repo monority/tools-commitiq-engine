@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { execa } from "execa";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, writeFile, unlink } from "node:fs/promises";
 import { join } from "node:path";
 import {
   detectPackageManager,
@@ -10,104 +10,114 @@ import {
   readProjectPackage,
 } from "../src/utils/ProjectUtils.js";
 import { runCheck } from "./quality-staged.js";
+import { readFileSync, existsSync } from "node:fs";
 
-const command = process.argv[2] ?? "check";
-const generateReport = process.argv.includes("--report");
+const cmd = process.argv[2];
+const withReport = process.argv.includes("--report");
+const projRoot = await getProjectRoot();
+const hookOn = existsSync(join(projRoot, ".husky", "pre-commit"));
 
-if (
-  command === "staged" ||
-  command === "s" ||
-  command === "check" ||
-  command === "c"
-) {
-  await runCheck({ generateReport });
-} else if (command === "init" || command === "i") {
-  await initHook();
-} else if (command === "--help" || command === "-h" || command === "help") {
-  printHelp();
-} else {
-  console.error(`Unknown command: ${command}`);
-  printHelp();
-  process.exit(1);
+const menuOpts = `
+╔════════════════════════════════════════╗
+║     Commit Quality Check       ║
+╠════════════════════════════════╣
+║  i init     Install hook     ║
+║  e enable  Enable hook     ║
+║  d disable Disable hook    ║
+║  s staged  Check staged    ║
+║  c check   Full check      ║
+║  status   Show status      ║
+║  menu     Show menu       ║
+╚════════════════════════════════╝
+`;
+
+switch (cmd) {
+  case "init":
+  case "i":
+    await initHook();
+    process.exit(0);
+  case "enable":
+  case "e":
+    await enableHook();
+    process.exit(0);
+  case "disable":
+  case "d":
+    await disableHook();
+    process.exit(0);
+  case "status":
+  case "st":
+    await showStatus();
+    process.exit(0);
+  case "menu":
+  case "m":
+    console.log(menuOpts);
+    console.log("\nStatus:", hookOn ? "On" : "Off");
+    process.exit(0);
+  case "staged":
+  case "s":
+    await runCheck({ generateReport: withReport });
+    process.exit(0);
+  case "check":
+  case "c":
+    await runCheck({ generateReport: withReport });
+    process.exit(0);
+  case "--help":
+  case "-h":
+  case "help":
+    console.log(menuOpts);
+    console.log("\nStatus:", hookOn ? "On" : "Off");
+    process.exit(0);
+  case undefined:
+    console.log(menuOpts);
+    console.log("\nStatus:", hookOn ? "On" : "Off");
+    process.exit(0);
+  default:
+    console.error("Unknown:", cmd);
+    console.log(menuOpts);
+    process.exit(1);
 }
 
 async function initHook() {
-  const root = await getProjectRoot();
-  const packageManager = await detectPackageManager(root);
-  let projectPackage = await readProjectPackage(root);
-
-  projectPackage = await ensurePackagesInstalled({
-    root,
-    packageManager,
-    projectPackage,
+  const pkgMgr = await detectPackageManager(projRoot);
+  let pkg = await readProjectPackage(projRoot);
+  pkg = await ensurePackagesInstalled({
+    root: projRoot,
+    packageManager: pkgMgr,
+    projectPackage: pkg,
     packages: ["husky"],
-    reason: "install the pre-commit hook",
+    reason: "install hook",
   });
-
-  if (
-    !projectPackage.dependencies?.husky &&
-    !projectPackage.devDependencies?.husky
-  ) {
-    console.error("Husky is required to install the pre-commit hook.");
+  if (!pkg.dependencies?.husky && !pkg.devDependencies?.husky) {
+    console.error("Need husky");
     process.exit(1);
   }
-
-  const { command: pmCommand, args: pmArgs } = getPackageManagerExecCommand(
-    packageManager,
-    ["husky", "init"],
-  );
-
-  console.log("Installing Husky pre-commit hook...");
-  await execa(pmCommand, pmArgs, {
-    cwd: root,
-    stdio: "inherit",
-  });
-
-  const hookPath = join(root, ".husky", "pre-commit");
-  const hookBody = createHookFile(packageManager);
-  const currentHook = await readHookIfExists(hookPath);
-
-  if (currentHook !== hookBody) {
-    await mkdir(join(root, ".husky"), { recursive: true });
-    await writeFile(hookPath, hookBody, "utf8");
-  }
-
-  console.log(
-    "commit-quality-check is ready. The hook will run on every commit.",
-  );
+  const { command: c, args: a } = getPackageManagerExecCommand(pkgMgr, ["husky", "init"]);
+  console.log("Installing...");
+  await execa(c, a, { cwd: projRoot, stdio: "inherit" });
+  await enableHook();
 }
 
-function createHookFile(packageManager) {
-  const { command: pmCommand, args } = getPackageManagerExecCommand(
-    packageManager,
-    ["cqc", "c"],
-  );
-  const commandLine = [pmCommand, ...args].join(" ");
+async function enableHook() {
+  const p = join(projRoot, ".husky", "pre-commit");
+  const body = makeHook();
+  try { await mkdir(join(projRoot, ".husky"), { recursive: true }); } catch {}
+  await writeFile(p, body, "utf8");
+  console.log("Hook enabled");
+}
 
+async function disableHook() {
+  const p = join(projRoot, ".husky", "pre-commit");
+  try { await unlink(p); console.log("Hook disabled"); }
+  catch (e) { console.log(e.code === "ENOENT" ? "Already off" : "Error"); }
+}
+
+async function showStatus() {
+  console.log("Auto-check:", hookOn ? "On" : "Off");
+  console.log("Root:", projRoot);
+}
+
+function makeHook() {
   return `#!/usr/bin/env sh
-
-${commandLine}
+npm exec -- cqc c
 `;
-}
-
-async function readHookIfExists(hookPath) {
-  try {
-    return await readFile(hookPath, "utf8");
-  } catch (error) {
-    if (error && error.code === "ENOENT") {
-      return null;
-    }
-
-    throw error;
-  }
-}
-
-function printHelp() {
-  console.log(`commit-quality-check
-
-Commands:
-  cqc i | init     Install the Husky pre-commit hook
-  cqc s | staged   Run fixes only on staged files
-  cqc c | check    Run staged fixes, then configured project scripts
-`);
 }
