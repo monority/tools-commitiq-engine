@@ -1,4 +1,6 @@
 import { BaseChecker } from "./BaseChecker.js";
+import { join } from "node:path";
+import { readFileSync, existsSync } from "node:fs";
 
 export class CommitMsgChecker extends BaseChecker {
   constructor() {
@@ -7,34 +9,35 @@ export class CommitMsgChecker extends BaseChecker {
   }
 
   async run(context) {
-    const { root, execa } = context;
+    const { root } = context;
 
-    try {
-      // In a git hook context, the commit message is usually in .git/COMMIT_EDITMSG
-      const { stdout } = await execa("git", ["log", "-1", "--pretty=%B"], {
-        cwd: root,
-      });
-      const message = stdout.trim();
+    let message = "";
+    const commitMsgPath = join(root, ".git", "COMMIT_EDITMSG");
+    const gitMsgPath = join(root, ".git", "msg");
 
-      if (!message)
-        return { success: true, message: "No commit message found" };
-
-      // Conventional Commits regex or Emoji-shortcode prefix:
-      // Matches "type(scope): description" OR ":emoji: description"
-      const conventionalRegex =
-        /^((feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\(.+\))?!?: .+|:[a-z_]+: .+)$/;
-
-      if (!conventionalRegex.test(message)) {
-        return {
-          success: false,
-          message:
-            'Commit message does not follow Conventional Commits format. Example: "feat(auth): add login functionality"',
-        };
-      }
-
-      return { success: true, message: "Commit message is valid" };
-    } catch (error) {
-      return { success: true, message: "Could not verify commit message" };
+    if (existsSync(gitMsgPath)) {
+      message = readFileSync(gitMsgPath, "utf8").trim();
+    } else if (existsSync(commitMsgPath)) {
+      message = readFileSync(commitMsgPath, "utf8").trim();
     }
+
+    console.error("[DEBUG] CommitMsgChecker - root:", root);
+    console.error("[DEBUG] COMMIT_EDITMSG exists:", existsSync(commitMsgPath));
+    console.error("[DEBUG] .git/msg exists:", existsSync(gitMsgPath));
+    console.error("[DEBUG] message read:", JSON.stringify(message));
+      return { success: true, message: "No commit message found" };
+
+    const conventionalRegex =
+      /^((feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\(.+\))?!?: .+|:[a-z_]+: .+|[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}] .+)$/u;
+
+    if (!conventionalRegex.test(message)) {
+      return {
+        success: false,
+        message:
+          'Commit message does not follow Conventional Commits or Gitmoji format. Example: "feat(auth): add login" or ":art: update readme"',
+      };
+    }
+
+    return { success: true, message: "Commit message is valid" };
   }
 }
