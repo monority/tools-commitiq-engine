@@ -16,8 +16,6 @@
     "src",
     "cqc"
   ],
-  "main": "scripts/cli.js",
-  "type": "module",
   "scripts": {
     "prepare": "husky"
   },
@@ -33,6 +31,7 @@
     "quality"
   ],
   "dependencies": {
+    "commit-quality-check": "^1.0.7",
     "execa": "^9.5.2",
     "husky": "^9.1.6"
   },

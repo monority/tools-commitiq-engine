@@ -29,13 +29,13 @@ export class BaseChecker {
     );
 
     try {
-      const { stdout } = await context.execa(command, execArgs, {
+      const result = await context.execa(command, execArgs, {
         cwd: root,
         stdio: "pipe",
       });
-      return { success: true, stdout: stdout.trim() };
+      return { success: true, stdout: result.stdout?.trim() || "", stderr: result.stderr?.trim() || "" };
     } catch (error) {
-      return { success: false, stderr: error.stderr || error.message };
+      return { success: false, stdout: error.stdout?.trim() || "", stderr: error.stderr?.trim() || error.message };
     }
   }
 

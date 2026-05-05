@@ -27,11 +27,18 @@ export class TestChecker extends BaseChecker {
 
     const result = await this.exec(context, [script]);
 
+    const errMsg = result.stderr || result.stdout || "Tests failed";
+    if (!result.success) {
+      return {
+        success: false,
+        message: `${script}: ${errMsg.substring(0, 100)}`,
+        suggestedFix: `Run: npm test`,
+      };
+    }
+
     return {
-      success: result.success,
-      message: result.success
-        ? `Tests (${script}) passed`
-        : `Tests failed`,
+      success: true,
+      message: `Tests (${script}) passed`,
     };
   }
 }
