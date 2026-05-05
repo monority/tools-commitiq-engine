@@ -35,6 +35,7 @@ export class QualityEngine {
         return { allSuccess: false, results: [] };
       }
     }
+    this.profile = profile;
     console.log(`🚀 Running Quality Check [Profile: ${profile}]`);
 
     const context = {
@@ -136,7 +137,8 @@ export class QualityEngine {
   }
 
   shouldRunChecker(checker, profile) {
-    if (profile === "full") return true;
+    const p = profile || this.profile || "fast";
+    if (p === "full") return true;
     return checker.profile === "fast" || !checker.profile;
   }
 

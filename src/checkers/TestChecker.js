@@ -9,36 +9,29 @@ export class TestChecker extends BaseChecker {
   async run(context) {
     const { projectPackage, packageManager, profile } = context;
 
-    // Determine the test script to run based on profile
-    // 'fast' profile runs 'test' (usually unit tests), 'full' runs 'test:e2e' or similar
-    let script = "test";
-    if (profile === "full" && projectPackage.scripts?.["test:e2e"]) {
-      script = "test:e2e";
+    const scripts = profile === "full" 
+      ? ["test:e2e", "test:e2e", "playwright", "test:playwright"]
+      : ["test", "test:unit", "test:ci", "vitest", "jest"];
+
+    let script = null;
+    for (const s of scripts) {
+      if (projectPackage.scripts?.[s]) {
+        script = s;
+        break;
+      }
     }
 
-    if (!projectPackage.scripts?.[script]) {
-      return {
-        success: true,
-        message: `No ${script} script found in package.json`,
-      };
+    if (!script) {
+      return { success: true, message: "No test script found" };
     }
 
-    const cmd =
-      packageManager === "npm"
-        ? "npm"
-        : packageManager === "pnpm"
-          ? "pnpm"
-          : packageManager === "yarn"
-            ? "yarn"
-            : "npm";
-
-    const result = await this.exec(context, [cmd, "run", script]);
+    const result = await this.exec(context, [script]);
 
     return {
       success: result.success,
       message: result.success
         ? `Tests (${script}) passed`
-        : `Tests failed: ${result.stderr}`,
+        : `Tests failed`,
     };
   }
 }

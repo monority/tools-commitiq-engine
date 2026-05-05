@@ -24,7 +24,7 @@ const menuOpts = `
 ║  2) disable Disable hook       ║
 ║  3) status  Show status        ║
 ║  4) staged  Check staged       ║
-║  5) check   Full check         ║
+║  5) check   Full check (+e2e)  ║
 ║  6) quit    Exit               ║
 ╚════════════════════════════════╝
 `;
@@ -63,11 +63,11 @@ async function handleChoice(choice) {
         break;
       case "4":
       case "staged":
-        await runCheck({ generateReport: false });
+        await runCheck({ generateReport: false, fullProfile: false });
         break;
       case "5":
       case "check":
-        await runCheck({ generateReport: false });
+        await runCheck({ generateReport: false, fullProfile: true });
         break;
       case "6":
       case "quit":
@@ -145,6 +145,7 @@ async function main() {
   } else {
     const cmd = process.argv[2];
     const withReport = process.argv.includes("--report");
+    const isFull = process.argv.includes("--full");
     
     switch (cmd) {
       case "enable":
@@ -161,11 +162,11 @@ async function main() {
         break;
       case "staged":
       case "s":
-        await runCheck({ generateReport: withReport });
+        await runCheck({ generateReport: withReport, fullProfile: isFull });
         break;
       case "check":
       case "c":
-        await runCheck({ generateReport: withReport });
+        await runCheck({ generateReport: withReport, fullProfile: isFull });
         break;
       case "quit":
       case "q":

@@ -31,11 +31,11 @@ export async function runCheck(options = {}) {
       packageManager,
       projectPackage,
       stagedFiles,
-      profile: "fast", // Default to fast for staged checks
+      profile: options.fullProfile ? "full" : "fast",
     });
 
     console.log(`🚀 Running commit quality checks...`);
-    const { allSuccess, results } = await engine.run();
+    const { allSuccess, results } = await engine.run(options.fullProfile ? "full" : "fast");
 
     for (const result of results) {
       if (result.success) {
