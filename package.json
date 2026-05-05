@@ -1,16 +1,23 @@
 {
   "name": "commit-quality-check",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "Pre-commit quality checks for staged files and project scripts.",
   "type": "module",
+  "main": "scripts/cli.js",
   "bin": {
     "commit-quality-check": "scripts/cli.js",
     "cqc": "scripts/cli.js"
   },
+  "exports": {
+    ".": "./scripts/cli.js"
+  },
   "files": [
     "scripts",
-    "src"
+    "src",
+    "cqc"
   ],
+  "main": "scripts/cli.js",
+  "type": "module",
   "scripts": {
     "prepare": "husky"
   },
