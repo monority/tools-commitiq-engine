@@ -89,20 +89,11 @@ export class QualityEngine {
       content += `| ${r.name} | ${status} | ${r.message} |\n`;
     });
 
-    content += "\n## 🛠 How to fix\n\n";
     const failures = results.filter((r) => !r.success);
+    const setupSuggestions = results.filter((r) => r.success && r.suggestedFix);
 
-    if (failures.length === 0) {
-      const skippedWithFix = results.filter(r => r.suggestedFix);
-      if (skippedWithFix.length === 0) {
-        content += "No failures detected.";
-      } else {
-        content += "## 💡 Setup Suggestions\n\n";
-        skippedWithFix.forEach(s => {
-          content += `### ${s.name}\n- ${s.message}\n- Run: \`${s.suggestedFix}\` to install necessary dependencies.\n\n`;
-        });
-      }
-    } else {
+    if (failures.length > 0) {
+      content += "## 🛠 How to fix\n\n";
       failures.forEach((f) => {
         content += `### ${f.name}\n`;
         if (f.suggestedFix) {
@@ -121,6 +112,16 @@ export class QualityEngine {
         }
         content += "\n";
       });
+      content += "\n";
+    }
+
+    if (setupSuggestions.length > 0) {
+      content += "## 💡 Setup Suggestions\n\n";
+      setupSuggestions.forEach((s) => {
+        content += `### ${s.name}\n- ${s.message}\n- Run: \`${s.suggestedFix}\` to install necessary dependencies.\n\n`;
+      });
+    } else if (failures.length === 0) {
+      content += "## ✅ Results\n\nNo failures detected.";
     }
 
     content +=

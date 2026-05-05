@@ -19,9 +19,10 @@ export class CommitMsgChecker extends BaseChecker {
       if (!message)
         return { success: true, message: "No commit message found" };
 
-      // Simple Conventional Commits regex: type(scope): description
+      // Conventional Commits regex or Emoji-shortcode prefix:
+      // Matches "type(scope): description" OR ":emoji: description"
       const conventionalRegex =
-        /^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\(.+\))?!?: .+/;
+        /^((feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\(.+\))?!?: .+|:[a-z_]+: .+)$/;
 
       if (!conventionalRegex.test(message)) {
         return {

@@ -25,6 +25,7 @@ export async function runCheck(options = {}) {
       .filter(Boolean);
 
     const engine = createQualityEngine({
+      generateReport: true,
       ...options,
       root,
       packageManager,
@@ -64,7 +65,15 @@ export async function runCheck(options = {}) {
   }
 }
 
+import { fileURLToPath } from "node:url";
+import { dirname } from "node:path";
+
 // If run directly
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
+  runCheck();
+} else if (process.argv[1] && dirname(fileURLToPath(import.meta.url)) === dirname(process.argv[1])) {
+  // This handles cases where the script is called via a different path format
+  runCheck();
+} else if (process.argv[1]?.endsWith('quality-staged.js')) {
   runCheck();
 }
