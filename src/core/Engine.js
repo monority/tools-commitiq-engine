@@ -1,4 +1,5 @@
-import { join } from "node:path";
+import { join, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 import { ProjectContext } from "./ProjectContext.js";
 import { CheckRegistry } from "./CheckRegistry.js";
 import { TaskRunner } from "./TaskRunner.js";
@@ -24,8 +25,9 @@ export class QualityEngine {
       const context = await ProjectContext.create(this.options);
       context.profile = profile;
 
-      // Auto-discover checkers from the tool's checkers directory
-      const checkersDir = join(process.cwd(), "src/checkers");
+      // Auto-discover checkers from the tool's installation directory
+      const __dirname = dirname(fileURLToPath(import.meta.url));
+      const checkersDir = join(__dirname, "..", "checkers");
       await this.registry.discover(checkersDir);
 
       const checkers = this.registry.getCheckersForProfile(profile, context.config.skip);

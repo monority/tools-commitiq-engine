@@ -22,24 +22,31 @@ export class CommitMsgChecker extends BaseChecker {
       message = readFileSync(commitMsgPath, "utf8").trim();
     }
 
-    if (!message) {
-      try {
-        const result = await this.exec(context, ["git", "diff", "--cached", "-z", "--pretty=format:%B"]);
-        message = (result.stdout || "").trim();
-      } catch { }
+    // Validation: If the message is just a version number (e.g., "1.0.16"), 
+    // it's a stale file from a previous operation, not a real commit message.
+    const isVersionString = /^\d+(\.\d+)*$/.test(message);
+
+    if (!message || isVersionString) {
+      // In pre-commit, the message isn't in a file yet if using -m.
+      // If we found a version string, it's stale data.
+      return { success: true, message: "No valid commit message found (skipping in pre-commit)" };
     }
 
-    if (!message)
-      return { success: true, message: "No commit message found" };
+    const patterns = {
+      conventional: /^((feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\(.+\))?!?: .+)$/,
+      gitmoji: /^:[a-z_]+: .+$/,
+      emoji: /^[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}] .+$/u,
+    };
 
-    const conventionalRegex =
-      /^((feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\(.+\))?!?: .+|:[a-z_]+: .+|[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}] .+)$/u;
+    const isValid = Object.values(patterns).some(regex => regex.test(message));
 
-    if (!conventionalRegex.test(message)) {
+    if (!isValid) {
       return {
         success: false,
         message:
-          'Commit message does not follow Conventional Commits or Gitmoji format. Example: "feat(auth): add login" or ":art: update readme"',
+          `Commit message does not follow Conventional Commits or Gitmoji format.\n` +
+          `Validated message: "${message}"\n` +
+          `Example: "feat(auth): add login" or ":art: update readme"`,
       };
     }
 
