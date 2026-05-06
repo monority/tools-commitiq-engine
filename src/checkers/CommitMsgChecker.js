@@ -1,7 +1,6 @@
 import { BaseChecker } from "../core/BaseChecker.js";
-import { join } from "node:path";
 import { readFileSync, existsSync } from "node:fs";
-import { execa } from "execa";
+import { resolve } from "node:path";
 
 export class CommitMsgChecker extends BaseChecker {
   constructor() {
@@ -10,16 +9,22 @@ export class CommitMsgChecker extends BaseChecker {
   }
 
   async run(context) {
-    const { root } = context;
+    const { root, commitMsgPath } = context;
+
+    if (!commitMsgPath) {
+      return {
+        success: true,
+        message: "No commit message target provided",
+      };
+    }
 
     let message = "";
-    const commitMsgPath = join(root, ".git", "COMMIT_EDITMSG");
-    const gitMsgPath = join(root, ".git", "msg");
+    const resolvedCommitMsgPath = commitMsgPath
+      ? (commitMsgPath.startsWith(".") ? resolve(root, commitMsgPath) : commitMsgPath)
+      : null;
 
-    if (existsSync(gitMsgPath)) {
-      message = readFileSync(gitMsgPath, "utf8").trim();
-    } else if (existsSync(commitMsgPath)) {
-      message = readFileSync(commitMsgPath, "utf8").trim();
+    if (resolvedCommitMsgPath && existsSync(resolvedCommitMsgPath)) {
+      message = readFileSync(resolvedCommitMsgPath, "utf8").trim();
     }
 
     // Validation: If the message is just a version number (e.g., "1.0.16"), 
@@ -27,9 +32,10 @@ export class CommitMsgChecker extends BaseChecker {
     const isVersionString = /^\d+(\.\d+)*$/.test(message);
 
     if (!message || isVersionString) {
-      // In pre-commit, the message isn't in a file yet if using -m.
-      // If we found a version string, it's stale data.
-      return { success: true, message: "No valid commit message found (skipping in pre-commit)" };
+      return {
+        success: true,
+        message: "No commit message found",
+      };
     }
 
     const patterns = {

@@ -1,22 +1,22 @@
 #!/usr/bin/env node
-import { mkdir, writeFile, unlink } from "node:fs/promises";
+import { existsSync } from "node:fs";
+import { chmod, mkdir, unlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import readline from "node:readline";
+import { CommitMsgChecker } from "../src/checkers/CommitMsgChecker.js";
 import { getProjectRoot } from "../src/utils/ProjectUtils.js";
 import { runCheck } from "./quality-staged.js";
-import { existsSync } from "node:fs";
-import readline from "node:readline";
 
 const projRoot = await getProjectRoot();
-const hookOn = existsSync(join(projRoot, ".husky", "pre-commit"));
 
 let selected = 0;
 const options = [
-  { label: "Enable hook", action: "enable", key: "e" },
-  { label: "Disable hook", action: "disable", key: "d" },
-  { label: "Status", action: "status", key: "s" },
-  { label: "Staged check", action: "staged", key: "f" },
-  { label: "Full check", action: "check", key: "c" },
-  { label: "Quit", action: "quit", key: "q" },
+  { label: "Enable hook", action: "enable" },
+  { label: "Disable hook", action: "disable" },
+  { label: "Status", action: "status" },
+  { label: "Staged check", action: "staged" },
+  { label: "Full check", action: "check" },
+  { label: "Quit", action: "quit" },
 ];
 
 const C = {
@@ -29,156 +29,234 @@ const C = {
   red: "\x1b[31m",
 };
 
+function getHookState() {
+  return {
+    preCommit: existsSync(join(projRoot, ".husky", "pre-commit")),
+    commitMsg: existsSync(join(projRoot, ".husky", "commit-msg")),
+  };
+}
+
 function drawMenu() {
+  const hookState = getHookState();
   console.clear();
-  console.log(`\n${C.cyan}${C.bright}━━━ COMMIT QUALITY CHECK ━━━${C.reset}\n`);
+  console.log(`\n${C.cyan}${C.bright}COMMIT QUALITY CHECK${C.reset}\n`);
 
   options.forEach((opt, i) => {
     const isSelected = i === selected;
-    const status = i === 0 && hookOn ? ` ${C.green}ON${C.reset}` : i === 1 && !hookOn ? ` ${C.red}OFF${C.reset}` : "";
-    const arrow = isSelected ? `${C.yellow}▶${C.reset}` : " ";
-    const label = isSelected ? `${C.bright}${C.cyan}${opt.label}${C.reset}` : opt.label;
+    const label = isSelected
+      ? `${C.bright}${C.cyan}${opt.label}${C.reset}`
+      : opt.label;
+    let status = "";
+    if (i === 0) status = hookState.preCommit ? ` ${C.green}ON${C.reset}` : ` ${C.red}OFF${C.reset}`;
+    if (i === 1) status = hookState.commitMsg ? ` ${C.green}ON${C.reset}` : ` ${C.red}OFF${C.reset}`;
+    const arrow = isSelected ? `${C.yellow}>${C.reset}` : " ";
     console.log(`  ${arrow} ${label}${status}`);
   });
 
-  console.log(`\n${C.magenta}↑↓ Select  ENTER Confirm  Q Quit${C.reset}`);
+  console.log(`\n${C.magenta}Use arrows, Enter, Q${C.reset}`);
 }
 
-const stdin = process.stdin;
-const isRaw = stdin.isRaw;
-
 function setRawMode(enable) {
-  if (stdin.setRawMode) {
-    stdin.setRawMode(enable);
+  if (process.stdin.isTTY && process.stdin.setRawMode) {
+    process.stdin.setRawMode(enable);
   }
   if (enable) {
-    stdin.resume();
-    stdin.setEncoding("utf8");
+    process.stdin.resume();
+    process.stdin.setEncoding("utf8");
   } else {
-    stdin.pause();
+    process.stdin.pause();
   }
+}
+
+async function pauseForTTY() {
+  if (!process.stdin.isTTY) return;
+  console.log(`\n${C.yellow}Press any key to return to menu...${C.reset}`);
+  await new Promise((resolve) => {
+    const onData = () => {
+      process.stdin.removeListener("data", onData);
+      setRawMode(false);
+      resolve();
+    };
+    process.stdin.once("data", onData);
+    setRawMode(true);
+  });
 }
 
 async function runMenu() {
   drawMenu();
 
   return new Promise((resolve) => {
-    readline.emitKeypressEvents(stdin);
-    const onKey = (char, key) => {
-      if (key.name === "up") {
+    readline.emitKeypressEvents(process.stdin);
+
+    const onKey = (_, key) => {
+      if (key?.name === "up") {
         selected = Math.max(0, selected - 1);
         drawMenu();
-      } else if (key.name === "down") {
+        return;
+      }
+
+      if (key?.name === "down") {
         selected = Math.min(options.length - 1, selected + 1);
         drawMenu();
-      } else if (key.name === "return" || key.name === "enter") {
-        stdin.removeListener("keypress", onKey);
+        return;
+      }
+
+      if (key?.name === "return" || key?.name === "enter") {
+        process.stdin.removeListener("keypress", onKey);
         setRawMode(false);
         console.clear();
         resolve(options[selected].action);
-      } else if (char === "q" || (key.ctrl && key.name === "c")) {
-        stdin.removeListener("keypress", onKey);
+        return;
+      }
+
+      if (key?.name === "q" || key?.ctrl && key?.name === "c") {
+        process.stdin.removeListener("keypress", onKey);
         setRawMode(false);
         console.clear();
         resolve("quit");
       }
     };
 
-    stdin.on("keypress", onKey);
+    process.stdin.on("keypress", onKey);
     setRawMode(true);
   });
 }
 
-async function main() {
-  const cmd = process.argv[2];
-  const targetRoot = process.argv[3];
+async function runCommitMsg(commitMsgPath) {
+  const checker = new CommitMsgChecker();
+  const result = await checker.run({
+    root: projRoot,
+    commitMsgPath,
+  });
 
-  // Map short commands to internal actions
-  const commandMap = {
-    'e': 'enable',
-    'd': 'disable',
-    's': 'status',
-    'f': 'staged',
-    'c': 'check',
-    'm': 'menu'
-  };
-
-  let initialChoice = cmd;
-  if (commandMap[cmd]) initialChoice = commandMap[cmd];
-
-  if (targetRoot) {
-    console.log(`${C.cyan}Target project: ${targetRoot}${C.reset}`);
-  }
-
-  // If a direct command was provided (and it's not 'menu'), execute it once and exit
-  if (initialChoice && initialChoice !== 'menu') {
-    await executeAction(initialChoice, targetRoot);
+  if (result.success) {
+    console.log(`\u2714 Commit Message Quality: ${result.message}`);
     return;
   }
 
-  // Otherwise, enter the interactive loop
-  let choice = 'menu';
-  while (choice !== 'quit') {
-    if (choice === 'menu') {
-      choice = await runMenu();
-    } else {
-      await executeAction(choice, targetRoot);
-      // After action, return to menu
-      choice = 'menu';
-    }
+  console.error(`\u274c Commit Message Quality: ${result.message}`);
+  if (result.suggestedFix) {
+    console.error(`\u{1F4A1} Fix: ${result.suggestedFix}`);
   }
-  console.log(`${C.magenta}Bye!${C.reset}`);
+  if (result.details) {
+    console.error(result.details);
+  }
+  process.exit(1);
 }
 
-async function executeAction(choice, root = null) {
+async function executeAction(choice, arg = null) {
   switch (choice) {
-    case "enable": await enableHook(); break;
-    case "disable": await disableHook(); break;
-    case "status": await showStatus(); break;
-    case "staged": await runCheck({ fullProfile: false, root }); break;
-    case "check": await runCheck({ fullProfile: true, root }); break;
-    case "quit": break; // Handled by loop
+    case "enable":
+      await enableHook();
+      break;
+    case "disable":
+      await disableHook();
+      break;
+    case "status":
+      await showStatus();
+      break;
+    case "staged":
+      await runCheck({ fullProfile: false, root: arg });
+      break;
+    case "check":
+      await runCheck({ fullProfile: true, root: arg });
+      break;
+    case "commit-msg":
+      await runCommitMsg(arg);
+      break;
+    case "quit":
+      break;
     default:
       if (choice) console.log(`${C.yellow}Unknown command: ${choice}${C.reset}`);
   }
-  if (choice !== 'quit') {
-    if (stdin.isTTY) {
-      console.log(`\n${C.yellow}Press any key to return to menu...${C.reset}`);
-      await new Promise(resolve => {
-        try {
-          stdin.setRawMode(true);
-          stdin.resume();
-          stdin.on('data', () => {
-            stdin.removeListener('data', resolve);
-            resolve();
-          });
-        } catch (e) {
-          resolve();
-        }
-      });
-    } else {
-      // In non-TTY environments, we just resolve immediately
-      await Promise.resolve();
-    }
+
+  if (choice !== "quit") {
+    await pauseForTTY();
   }
 }
 
 async function enableHook() {
-  const p = join(projRoot, ".husky", "pre-commit");
-  const body = `#!/usr/bin/env sh\nnpm exec -- cqc check\n`;
-  try { await mkdir(join(projRoot, ".husky"), { recursive: true }); } catch { }
-  await writeFile(p, body, "utf8");
-  console.log(`${C.green}✅ Hook enabled${C.reset}`);
+  const huskyDir = join(projRoot, ".husky");
+  const preCommitPath = join(huskyDir, "pre-commit");
+  const commitMsgPath = join(huskyDir, "commit-msg");
+
+  await mkdir(huskyDir, { recursive: true });
+  await writeFile(preCommitPath, "#!/usr/bin/env sh\nnpm exec -- cqc staged\n", "utf8");
+  await writeFile(commitMsgPath, "#!/usr/bin/env sh\nnpm exec -- cqc commit-msg \"$1\"\n", "utf8");
+  await chmod(preCommitPath, 0o755);
+  await chmod(commitMsgPath, 0o755);
+  console.log(`${C.green}Hooks enabled${C.reset}`);
 }
 
 async function disableHook() {
-  const p = join(projRoot, ".husky", "pre-commit");
-  try { await unlink(p); console.log(`${C.green}✅ Hook disabled${C.reset}`); }
-  catch (e) { console.log(`${C.yellow}ℹ️ Already off${C.reset}`); }
+  const preCommitPath = join(projRoot, ".husky", "pre-commit");
+  const commitMsgPath = join(projRoot, ".husky", "commit-msg");
+  let removed = false;
+
+  try {
+    await unlink(preCommitPath);
+    removed = true;
+  } catch {
+    // ignore
+  }
+
+  try {
+    await unlink(commitMsgPath);
+    removed = true;
+  } catch {
+    // ignore
+  }
+
+  console.log(
+    removed ? `${C.green}Hooks disabled${C.reset}` : `${C.yellow}Already off${C.reset}`,
+  );
 }
 
 async function showStatus() {
-  console.log(`\n${C.cyan}━━━ STATUS ━━━\n${C.reset}Auto-check: ${hookOn ? `${C.green}ON` : `${C.red}OFF`}${C.reset}`);
+  const hookState = getHookState();
+  console.log(
+    `\n${C.cyan}STATUS${C.reset}\n` +
+    `pre-commit: ${hookState.preCommit ? `${C.green}ON` : `${C.red}OFF`}${C.reset}\n` +
+    `commit-msg: ${hookState.commitMsg ? `${C.green}ON` : `${C.red}OFF`}${C.reset}`,
+  );
 }
 
-main();
+async function main() {
+  const cmd = process.argv[2];
+  const arg = process.argv[3];
+
+  const commandMap = {
+    e: "enable",
+    d: "disable",
+    s: "status",
+    f: "staged",
+    c: "check",
+    m: "menu",
+    "commit-msg": "commit-msg",
+  };
+
+  const initialChoice = commandMap[cmd] || cmd;
+
+  if (arg && initialChoice !== "commit-msg") {
+    console.log(`${C.cyan}Target project: ${arg}${C.reset}`);
+  }
+
+  if (initialChoice && initialChoice !== "menu") {
+    await executeAction(initialChoice, arg);
+    return;
+  }
+
+  let choice = "menu";
+  while (choice !== "quit") {
+    if (choice === "menu") {
+      choice = await runMenu();
+    } else {
+      await executeAction(choice, arg);
+      choice = "menu";
+    }
+  }
+
+  console.log(`${C.magenta}Bye!${C.reset}`);
+}
+
+await main();

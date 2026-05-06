@@ -1,6 +1,3 @@
-import { fileURLToPath } from "node:url";
-import { dirname } from "node:path";
-
 import { createQualityEngine } from "../src/index.js";
 import {
   getProjectRoot,
@@ -68,11 +65,11 @@ export async function runCheck(options = {}) {
   }
 }
 
-// FIX: prevent auto-run on import (ESM bug - argv[1] matches during import)
+export { runCheck as run };
+
 const isDirectRun = process.argv[1] &&
   process.argv[1].endsWith('quality-staged.js');
 
 if (isDirectRun) {
-  console.error("[DEBUG] Called directly");
-  runCheck();
+  await runCheck();
 }

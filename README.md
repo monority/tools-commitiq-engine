@@ -70,10 +70,11 @@ Or use direct commands:
 | `npx cqc status` | `s` | Show status |
 | `npx cqc staged` | `f` | Fast check (staged) |
 | `npx cqc check` | `c` | Full check + e2e |
+| `npx cqc commit-msg <file>` | - | Validate commit message hook file |
 
 ### Using as Git Hook
 
-After enabling, the hook runs automatically on every `git commit`. To bypass (if needed):
+After enabling, `pre-commit` runs staged checks and `commit-msg` validates commit messages automatically on every `git commit`. To bypass (if needed):
 ```bash
 git commit --no-verify -m "feat: ..."
 ```
@@ -84,11 +85,12 @@ When running `cqc check`, the tool runs these checkers:
 
 1. **Linting (ESLint)**: Runs `eslint --fix` on staged JS/TS files.
 2. **Formatting (Prettier)**: Runs `prettier --write` on staged files.
-3. **Commit Message**: Validates format (Conventional or Gitmoji).
-4. **Secret Scanner**: Scans for API keys, tokens, passwords.
-5. **Dependencies Vulnerabilities**: Runs `npm audit` to check vulnerabilities.
-6. **Test Suite**: Runs your test script (jest, vitest, etc.).
-7. **Playwright Tests** (full profile only): Runs e2e tests.
+3. **Secret Scanner**: Scans for API keys, tokens, passwords.
+4. **Dependencies Vulnerabilities**: Runs `npm audit` to check vulnerabilities.
+5. **Test Suite**: Runs your test script (jest, vitest, etc.).
+6. **Playwright Tests** (full profile only): Runs e2e tests.
+
+Commit message validation runs in the `commit-msg` hook via `npx cqc commit-msg <file>`.
 
 ### Auto-detected Scripts
 If no custom configuration is provided, `cqc` looks for these scripts in your `package.json` (in order):
@@ -105,7 +107,6 @@ You can override the auto-detection by adding a `gitQuality` object to your `pac
 ```json
 {
   "gitQuality": {
-    "scripts": ["lint", "typecheck", "playwright"],
     "skip": ["Secret Scanner", "Dependencies Vulnerabilities"],
     "staged": {
       "prettier": true,
@@ -115,7 +116,6 @@ You can override the auto-detection by adding a `gitQuality` object to your `pac
 }
 ```
 
-- `scripts`: An array of script names to execute during the check.
 - `skip`: An array of checker names to skip (e.g., `"Secret Scanner"`, `"Dependencies Vulnerabilities"`).
 - `staged.prettier`: Enable/disable automatic Prettier fixing on staged files.
 - `staged.eslint`: Enable/disable automatic ESLint fixing on staged files.

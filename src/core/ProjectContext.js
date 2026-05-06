@@ -77,7 +77,6 @@ export class ProjectContext {
                 prettier: config.staged?.prettier ?? true,
                 eslint: config.staged?.eslint ?? true,
             },
-            scripts: config.scripts || [],
             skip: config.skip || [],
         };
     }

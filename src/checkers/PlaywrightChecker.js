@@ -9,7 +9,7 @@ export class PlaywrightChecker extends BaseChecker {
   async run(context) {
     const { projectPackage } = context;
 
-    const scripts = ["test:e2e", "test:e2e", "playwright", "test:playwright", "e2e"];
+    const scripts = ["test:e2e", "playwright", "test:playwright", "e2e"];
     let script = null;
     for (const s of scripts) {
       if (projectPackage.scripts?.[s]) {
@@ -32,7 +32,7 @@ export class PlaywrightChecker extends BaseChecker {
       return { success: true, message: "No e2e script found" };
     }
 
-    const result = await this.exec(context, [script]);
+    const result = await this.runScript(context, script);
 
     if (!result.success) {
       const err = result.stderr || result.stdout || "";

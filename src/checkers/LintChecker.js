@@ -27,7 +27,7 @@ export class LintChecker extends BaseChecker {
     if (lintFiles.length === 0)
       return { success: true, message: "No JS/TS files staged" };
 
-    const result = await this.exec(context, ["eslint", "--fix", ...lintFiles]);
+    const result = await this.exec(context, "eslint", ["--fix", ...lintFiles]);
 
     if (!result.success) {
       const err = result.stderr || "";

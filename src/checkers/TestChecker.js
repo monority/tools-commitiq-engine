@@ -7,11 +7,8 @@ export class TestChecker extends BaseChecker {
   }
 
   async run(context) {
-    const { projectPackage, packageManager, profile } = context;
-
-    const fullScripts = ["test:e2e", "playwright", "test:playwright"];
-    const fastScripts = ["test", "test:unit", "test:ci", "vitest", "jest"];
-    const scripts = profile === "full" ? [...fullScripts, ...fastScripts] : [...fastScripts, ...fullScripts];
+    const { projectPackage } = context;
+    const scripts = ["test", "test:unit", "test:ci", "vitest", "jest"];
 
     let script = null;
     for (const s of scripts) {
@@ -25,7 +22,7 @@ export class TestChecker extends BaseChecker {
       return { success: true, message: "No test script found" };
     }
 
-    const result = await this.exec(context, [script]);
+    const result = await this.runScript(context, script);
 
     if (!result.success) {
       const err = result.stderr || result.stdout || "";

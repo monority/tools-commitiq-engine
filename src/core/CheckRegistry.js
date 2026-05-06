@@ -1,6 +1,7 @@
 import { readdir } from "node:fs/promises";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
+import { BaseChecker } from "./BaseChecker.js";
 
 export class CheckRegistry {
     constructor() {
@@ -30,10 +31,13 @@ export class CheckRegistry {
 
                 try {
                     const module = await import(fileUrl);
-                    // Find the first exported class that extends BaseChecker (or similar)
                     for (const exportKey in module) {
                         const ExportedClass = module[exportKey];
-                        if (typeof ExportedClass === "function" && ExportedClass.prototype?.name) {
+                        if (
+                            typeof ExportedClass === "function" &&
+                            ExportedClass !== BaseChecker &&
+                            ExportedClass.prototype instanceof BaseChecker
+                        ) {
                             const instance = new ExportedClass();
                             this.register(instance);
                         }

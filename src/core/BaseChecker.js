@@ -21,21 +21,26 @@ export class BaseChecker {
     /**
      * Helper to execute shell commands via the package manager.
      */
-    async exec(context, args) {
-        const { packageManager, root } = context;
-        const { command, args: execArgs } = this.getPackageManagerCommand(
-            packageManager,
-            args,
-        );
+    async exec(context, command, args = [], options = {}) {
+        const { root } = context;
 
         try {
-            const result = await execa(command, execArgs, {
+            const result = await execa(command, args, {
                 cwd: root,
                 stdio: "pipe",
+                ...options,
             });
-            return { success: true, stdout: result.stdout?.trim() || "", stderr: result.stderr?.trim() || "" };
+            return {
+                success: true,
+                stdout: result.stdout?.trim() || "",
+                stderr: result.stderr?.trim() || "",
+            };
         } catch (error) {
-            return { success: false, stdout: error.stdout?.trim() || "", stderr: error.stderr?.trim() || error.message };
+            return {
+                success: false,
+                stdout: error.stdout?.trim() || "",
+                stderr: error.stderr?.trim() || error.message,
+            };
         }
     }
 
@@ -57,19 +62,27 @@ export class BaseChecker {
         }
     }
 
-    getPackageManagerCommand(packageManager, args) {
-        const script = args[0] || "";
-
+    getPackageManagerScriptCommand(packageManager, script, extraArgs = []) {
         switch (packageManager) {
             case "pnpm":
-                return { command: "pnpm", args: ["run", script] };
+                return { command: "pnpm", args: ["run", script, "--", ...extraArgs] };
             case "yarn":
-                return { command: "yarn", args: [script] };
+                return { command: "yarn", args: ["run", script, ...extraArgs] };
             case "bun":
-                return { command: "bun", args: ["run", script] };
+                return { command: "bun", args: ["run", script, ...extraArgs] };
             default:
-                return { command: "npm", args: ["run", script] };
+                return { command: "npm", args: ["run", script, "--", ...extraArgs] };
         }
+    }
+
+    async runScript(context, script, extraArgs = []) {
+        const { packageManager } = context;
+        const { command, args } = this.getPackageManagerScriptCommand(
+            packageManager,
+            script,
+            extraArgs,
+        );
+        return this.exec(context, command, args);
     }
 
     /**
@@ -79,18 +92,22 @@ export class BaseChecker {
      * @returns {Promise<{installed: boolean, command: string}>}
      */
     async checkDependencies(context, dependencies) {
-        const { packageManager, root } = context;
+        const { packageManager, projectPackage } = context;
+        const hasDependency = (dep) =>
+            Boolean(
+                projectPackage?.dependencies?.[dep] ||
+                projectPackage?.devDependencies?.[dep] ||
+                projectPackage?.peerDependencies?.[dep],
+            );
 
-        for (const dep of dependencies) {
-            try {
-                // Check if the package is available in node_modules or globally
-                await execa("npm", ["list", dep], { cwd: root }, { stdio: 'ignore' });
-            } catch (e) {
-                const installCmd = this.getInstallCommand(packageManager, dependencies);
-                return { installed: false, command: installCmd };
-            }
+        if (dependencies.every(hasDependency)) {
+            return { installed: true, command: "" };
         }
-        return { installed: true, command: "" };
+
+        return {
+            installed: false,
+            command: this.getInstallCommand(packageManager, dependencies),
+        };
     }
 
     getInstallCommand(packageManager, dependencies) {

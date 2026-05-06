@@ -7,11 +7,11 @@ export class SecurityChecker extends BaseChecker {
   }
 
   async run(context) {
-    const { packageManager, root } = context;
+    const { packageManager } = context;
     const pm = packageManager || "npm";
 
     try {
-      const result = await this.exec(context, [pm, "audit"]);
+      const result = await this.exec(context, pm, ["audit"]);
       const output = result.stdout || result.stderr || "";
       const hasVulns = output.includes("vulnerabilities") && !output.includes("0 vulnerabilities");
 

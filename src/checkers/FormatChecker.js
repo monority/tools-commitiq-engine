@@ -27,8 +27,7 @@ export class FormatChecker extends BaseChecker {
     if (formatFiles.length === 0)
       return { success: true, message: "No formatable files staged" };
 
-    const result = await this.exec(context, [
-      "prettier",
+    const result = await this.exec(context, "prettier", [
       "--write",
       ...formatFiles,
     ]);
