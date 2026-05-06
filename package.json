@@ -17,6 +17,7 @@
     "cqc"
   ],
   "scripts": {
+    "test": "node --test ./test/*.test.js",
     "prepare": "husky"
   },
   "publishConfig": {

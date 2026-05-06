@@ -10,39 +10,34 @@ export class TaskRunner {
      * @returns {Promise<Array<Object>>} Results of all executions.
      */
     async execute(tasks, context) {
-        const results = [];
-        const queue = [...tasks];
-        const activePromises = [];
+        const results = new Array(tasks.length);
+        let nextIndex = 0;
 
-        while (queue.length > 0 || activePromises.length > 0) {
-            // Fill the active pipeline up to the concurrency limit
-            while (queue.length > 0 && activePromises.length < this.concurrency) {
-                const task = queue.shift();
-                const promise = (async () => {
-                    try {
-                        const result = await task.run(context);
-                        return { name: task.name, ...result };
-                    } catch (error) {
-                        return {
-                            name: task.name,
-                            success: false,
-                            message: error.message,
-                            error: error
-                        };
-                    } finally {
-                        // Remove itself from activePromises when done
-                        activePromises.splice(activePromises.indexOf(promise), 1);
-                    }
-                })();
-                activePromises.push(promise);
+        const runTask = async (task, index) => {
+            try {
+                const result = await task.run(context);
+                results[index] = { name: task.name, ...result };
+            } catch (error) {
+                results[index] = {
+                    name: task.name,
+                    success: false,
+                    message: error.message,
+                    error: error
+                };
             }
+        };
 
-            // Wait for the first task in the current batch to complete
-            if (activePromises.length > 0) {
-                const completed = await Promise.race(activePromises);
-                results.push(completed);
+        const worker = async () => {
+            while (nextIndex < tasks.length) {
+                const index = nextIndex;
+                nextIndex += 1;
+                await runTask(tasks[index], index);
             }
-        }
+        };
+
+        const workerCount = Math.min(this.concurrency, tasks.length);
+        const workers = Array.from({ length: workerCount }, () => worker());
+        await Promise.all(workers);
 
         return results;
     }

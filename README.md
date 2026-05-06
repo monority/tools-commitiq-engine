@@ -25,7 +25,7 @@
 - **Dependencies Vulnerabilities**: Runs `npm audit` to check for vulnerabilities.
 - **Fast Performance**: Optimized for staged files to keep your development loop quick.
 - **Quality Reports**: Generates a detailed `quality-report.md` upon failure, explaining exactly what went wrong and how to fix it.
-- **Two Profiles**: `fast` (default) for quick checks, `full` for tests + playwright e2e.
+- **Two Profiles**: `fast` (default) for staged checks + unit tests, `full` adds Playwright e2e.
 
 ##  Installation
 
@@ -50,8 +50,7 @@ Run `npx cqc` to show interactive menu (arrow keys + enter):
 ```
 ━━━ COMMIT QUALITY CHECK ━━━
 
-  ▶ Enable hook
-    Disable hook
+  ▶ Toggle hook ON
     Status
     Staged check
     Full check
@@ -65,6 +64,7 @@ Or use direct commands:
 | Command | Alias | Description |
 | :--- | :--- | :--- |
 | `npx cqc` | - | Interactive menu |
+| `npx cqc toggle` | `t` | Toggle pre-commit and commit-msg hooks |
 | `npx cqc enable` | `e` | Enable auto-check |
 | `npx cqc disable` | `d` | Disable auto-check |
 | `npx cqc status` | `s` | Show status |

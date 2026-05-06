@@ -13,7 +13,6 @@ export async function runCheck(options = {}) {
     const packageManager = await detectPackageManager(root);
     const projectPackage = await readProjectPackage(root);
 
-    // Detect staged files for the engine context
     const { stdout: stagedFilesOut } = await execa(
       "git",
       ["diff", "--cached", "--name-only", "--diff-filter=ACMR"],
@@ -34,14 +33,16 @@ export async function runCheck(options = {}) {
       profile: options.fullProfile ? "full" : "fast",
     });
 
-    console.log(`🚀 Running commit quality checks...`);
+    console.log("Running commit quality checks...");
     const { allSuccess, results } = await engine.run(options.fullProfile ? "full" : "fast");
 
-    for (const result of results) {
+    const totalResults = results.length;
+    for (const [index, result] of results.entries()) {
+      const prefix = `[${index + 1}/${totalResults}]`;
       if (result.success) {
-        console.log(`✅ ${result.name}: ${result.message}`);
+        console.log(`PASS ${prefix} ${result.name}: ${result.message}`);
       } else {
-        console.error(`❌ ${result.name}: ${result.message}`);
+        console.error(`FAIL ${prefix} ${result.name}: ${result.message}`);
       }
     }
 
@@ -52,15 +53,13 @@ export async function runCheck(options = {}) {
     }
 
     if (failed) {
-      console.error(
-        "\n❌ Quality checks failed. Please fix the issues before committing.",
-      );
+      console.error("\nQuality checks failed. Please fix issues before committing.");
       process.exit(1);
     }
 
-    console.log("\n✨ All quality checks passed!");
+    console.log("\nAll quality checks passed!");
   } catch (error) {
-    console.error(`\n💥 Fatal error during quality check: ${error.message}`);
+    console.error(`\nFatal error during quality check: ${error.message}`);
     process.exit(1);
   }
 }
@@ -68,7 +67,7 @@ export async function runCheck(options = {}) {
 export { runCheck as run };
 
 const isDirectRun = process.argv[1] &&
-  process.argv[1].endsWith('quality-staged.js');
+  process.argv[1].endsWith("quality-staged.js");
 
 if (isDirectRun) {
   await runCheck();

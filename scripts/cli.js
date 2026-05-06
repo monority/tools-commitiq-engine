@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { existsSync } from "node:fs";
-import { chmod, mkdir, unlink, writeFile } from "node:fs/promises";
+import { chmod, mkdir, readFile, unlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import readline from "node:readline";
 import { CommitMsgChecker } from "../src/checkers/CommitMsgChecker.js";
@@ -8,11 +8,14 @@ import { getProjectRoot } from "../src/utils/ProjectUtils.js";
 import { runCheck } from "./quality-staged.js";
 
 const projRoot = await getProjectRoot();
+const PRE_COMMIT_HOOK = "#!/usr/bin/env sh\nnpm exec -- cqc staged\n";
+const COMMIT_MSG_HOOK = "#!/usr/bin/env sh\nnpm exec -- cqc commit-msg \"$1\"\n";
+const PRE_COMMIT_COMMAND = "npm exec -- cqc staged";
+const COMMIT_MSG_COMMAND = "npm exec -- cqc commit-msg \"$1\"";
 
 let selected = 0;
 const options = [
-  { label: "Enable hook", action: "enable" },
-  { label: "Disable hook", action: "disable" },
+  { label: "Toggle hook", action: "toggle" },
   { label: "Status", action: "status" },
   { label: "Staged check", action: "staged" },
   { label: "Full check", action: "check" },
@@ -29,15 +32,35 @@ const C = {
   red: "\x1b[31m",
 };
 
-function getHookState() {
+async function hasHookCommand(filePath, expectedCommand) {
+  try {
+    const content = await readFile(filePath, "utf8");
+    return content.replace(/\r\n/g, "\n").includes(expectedCommand);
+  } catch {
+    return false;
+  }
+}
+
+async function getHookState() {
+  const preCommitPath = join(projRoot, ".husky", "pre-commit");
+  const commitMsgPath = join(projRoot, ".husky", "commit-msg");
+  const preCommitExists = existsSync(preCommitPath);
+  const commitMsgExists = existsSync(commitMsgPath);
+  const preCommitValid = await hasHookCommand(preCommitPath, PRE_COMMIT_COMMAND);
+  const commitMsgValid = await hasHookCommand(commitMsgPath, COMMIT_MSG_COMMAND);
+  const enabled = preCommitValid && commitMsgValid;
+  const broken = (preCommitExists || commitMsgExists) && !enabled;
+
   return {
-    preCommit: existsSync(join(projRoot, ".husky", "pre-commit")),
-    commitMsg: existsSync(join(projRoot, ".husky", "commit-msg")),
+    preCommit: preCommitValid,
+    commitMsg: commitMsgValid,
+    enabled,
+    broken,
   };
 }
 
-function drawMenu() {
-  const hookState = getHookState();
+async function drawMenu() {
+  const hookState = await getHookState();
   console.clear();
   console.log(`\n${C.cyan}${C.bright}COMMIT QUALITY CHECK${C.reset}\n`);
 
@@ -47,8 +70,11 @@ function drawMenu() {
       ? `${C.bright}${C.cyan}${opt.label}${C.reset}`
       : opt.label;
     let status = "";
-    if (i === 0) status = hookState.preCommit ? ` ${C.green}ON${C.reset}` : ` ${C.red}OFF${C.reset}`;
-    if (i === 1) status = hookState.commitMsg ? ` ${C.green}ON${C.reset}` : ` ${C.red}OFF${C.reset}`;
+    if (opt.action === "toggle") {
+      if (hookState.enabled) status = ` ${C.green}ON${C.reset}`;
+      else if (hookState.broken) status = ` ${C.yellow}BROKEN${C.reset}`;
+      else status = ` ${C.red}OFF${C.reset}`;
+    }
     const arrow = isSelected ? `${C.yellow}>${C.reset}` : " ";
     console.log(`  ${arrow} ${label}${status}`);
   });
@@ -83,21 +109,21 @@ async function pauseForTTY() {
 }
 
 async function runMenu() {
-  drawMenu();
+  await drawMenu();
 
   return new Promise((resolve) => {
     readline.emitKeypressEvents(process.stdin);
 
-    const onKey = (_, key) => {
+    const onKey = async (_, key) => {
       if (key?.name === "up") {
         selected = Math.max(0, selected - 1);
-        drawMenu();
+        await drawMenu();
         return;
       }
 
       if (key?.name === "down") {
         selected = Math.min(options.length - 1, selected + 1);
-        drawMenu();
+        await drawMenu();
         return;
       }
 
@@ -146,6 +172,9 @@ async function runCommitMsg(commitMsgPath) {
 
 async function executeAction(choice, arg = null) {
   switch (choice) {
+    case "toggle":
+      await toggleHook();
+      break;
     case "enable":
       await enableHook();
       break;
@@ -181,11 +210,20 @@ async function enableHook() {
   const commitMsgPath = join(huskyDir, "commit-msg");
 
   await mkdir(huskyDir, { recursive: true });
-  await writeFile(preCommitPath, "#!/usr/bin/env sh\nnpm exec -- cqc staged\n", "utf8");
-  await writeFile(commitMsgPath, "#!/usr/bin/env sh\nnpm exec -- cqc commit-msg \"$1\"\n", "utf8");
+  await writeFile(preCommitPath, PRE_COMMIT_HOOK, "utf8");
+  await writeFile(commitMsgPath, COMMIT_MSG_HOOK, "utf8");
   await chmod(preCommitPath, 0o755);
   await chmod(commitMsgPath, 0o755);
   console.log(`${C.green}Hooks enabled${C.reset}`);
+}
+
+async function toggleHook() {
+  const hookState = await getHookState();
+  if (hookState.enabled) {
+    await disableHook();
+  } else {
+    await enableHook();
+  }
 }
 
 async function disableHook() {
@@ -213,11 +251,18 @@ async function disableHook() {
 }
 
 async function showStatus() {
-  const hookState = getHookState();
+  const hookState = await getHookState();
+  const stateLabel = hookState.enabled
+    ? `${C.green}ON${C.reset}`
+    : hookState.broken
+      ? `${C.yellow}BROKEN${C.reset}`
+      : `${C.red}OFF${C.reset}`;
+
   console.log(
     `\n${C.cyan}STATUS${C.reset}\n` +
-    `pre-commit: ${hookState.preCommit ? `${C.green}ON` : `${C.red}OFF`}${C.reset}\n` +
-    `commit-msg: ${hookState.commitMsg ? `${C.green}ON` : `${C.red}OFF`}${C.reset}`,
+    `hook: ${stateLabel}\n` +
+    `pre-commit: ${hookState.preCommit ? `${C.green}OK` : `${C.red}MISSING/BAD`}${C.reset}\n` +
+    `commit-msg: ${hookState.commitMsg ? `${C.green}OK` : `${C.red}MISSING/BAD`}${C.reset}`,
   );
 }
 
@@ -226,6 +271,7 @@ async function main() {
   const arg = process.argv[3];
 
   const commandMap = {
+    t: "toggle",
     e: "enable",
     d: "disable",
     s: "status",
