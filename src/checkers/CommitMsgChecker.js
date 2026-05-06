@@ -1,4 +1,4 @@
-import { BaseChecker } from "./BaseChecker.js";
+import { BaseChecker } from "../core/BaseChecker.js";
 import { join } from "node:path";
 import { readFileSync, existsSync } from "node:fs";
 import { execa } from "execa";
@@ -24,11 +24,9 @@ export class CommitMsgChecker extends BaseChecker {
 
     if (!message) {
       try {
-        const { stdout } = await execa("git", ["diff", "--cached", "-z", "--pretty=format:%B"], {
-          cwd: root,
-        });
-        message = stdout.trim();
-      } catch {}
+        const result = await this.exec(context, ["git", "diff", "--cached", "-z", "--pretty=format:%B"]);
+        message = (result.stdout || "").trim();
+      } catch { }
     }
 
     if (!message)

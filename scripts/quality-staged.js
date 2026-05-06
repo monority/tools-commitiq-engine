@@ -12,7 +12,7 @@ import { execa } from "execa";
 
 export async function runCheck(options = {}) {
   try {
-    const root = await getProjectRoot();
+    const root = options.root || await getProjectRoot();
     const packageManager = await detectPackageManager(root);
     const projectPackage = await readProjectPackage(root);
 
@@ -69,7 +69,7 @@ export async function runCheck(options = {}) {
 }
 
 // FIX: prevent auto-run on import (ESM bug - argv[1] matches during import)
-const isDirectRun = process.argv[1] && 
+const isDirectRun = process.argv[1] &&
   process.argv[1].endsWith('quality-staged.js');
 
 if (isDirectRun) {

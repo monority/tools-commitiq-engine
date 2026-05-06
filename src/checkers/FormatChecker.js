@@ -1,4 +1,4 @@
-import { BaseChecker } from "./BaseChecker.js";
+import { BaseChecker } from "../core/BaseChecker.js";
 import { extname } from "node:path";
 
 export class FormatChecker extends BaseChecker {

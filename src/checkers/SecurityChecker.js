@@ -1,4 +1,4 @@
-import { BaseChecker } from "./BaseChecker.js";
+import { BaseChecker } from "../core/BaseChecker.js";
 
 export class SecurityChecker extends BaseChecker {
   constructor() {
@@ -7,18 +7,14 @@ export class SecurityChecker extends BaseChecker {
   }
 
   async run(context) {
-    const { packageManager, root, execa } = context;
+    const { packageManager, root } = context;
     const pm = packageManager || "npm";
-    
+
     try {
-      const { stdout, stderr } = await execa(pm, ["audit"], {
-        cwd: root,
-        stdio: "pipe",
-      });
-      
-      const output = stdout || stderr || "";
+      const result = await this.exec(context, [pm, "audit"]);
+      const output = result.stdout || result.stderr || "";
       const hasVulns = output.includes("vulnerabilities") && !output.includes("0 vulnerabilities");
-      
+
       if (hasVulns) {
         const lines = output.split("\n").slice(0, 15).join("\n");
         return {
@@ -28,7 +24,7 @@ export class SecurityChecker extends BaseChecker {
           details: `Run \`${pm} audit fix\` to fix.\n\n${lines}`,
         };
       }
-      
+
       return { success: true, message: "No vulnerabilities found" };
     } catch (error) {
       const err = error.stderr || error.message || "";

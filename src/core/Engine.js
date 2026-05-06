@@ -1,203 +1,64 @@
-import { execa } from "execa";
-import { readFile } from "node:fs/promises";
-import { join, resolve } from "node:path";
+import { join } from "node:path";
+import { ProjectContext } from "./ProjectContext.js";
+import { CheckRegistry } from "./CheckRegistry.js";
+import { TaskRunner } from "./TaskRunner.js";
+import { Reporter } from "./Reporter.js";
 
 export class QualityEngine {
   constructor(options = {}) {
-    this.checkers = [];
     this.options = options;
+    this.registry = new CheckRegistry();
+    this.runner = new TaskRunner();
+    this.reporter = new Reporter();
   }
 
   registerChecker(checker) {
-    this.checkers.push(checker);
-    return this;
-  }
-
-  async initialize() {
-    try {
-      this.root = await this.getProjectRoot();
-      this.projectPackage = await this.readProjectPackage();
-      this.packageManager = await this.detectPackageManager();
-      this.config = this.normalizeConfig(this.projectPackage.gitQuality || {});
-    } catch (error) {
-      throw new Error(`Initialization failed: ${error.message}`);
-    }
-
+    this.registry.register(checker);
     return this;
   }
 
   async run(profile = "fast") {
-    if (!this.config) {
-      try {
-        await this.initialize();
-      } catch (error) {
-        console.error(`❌ ${error.message}`);
-        return { allSuccess: false, results: [] };
-      }
-    }
-    this.profile = profile;
     console.log(`🚀 Running Quality Check [Profile: ${profile}]`);
 
-    const context = {
-      root: this.root,
-      packageManager: this.packageManager,
-      projectPackage: this.projectPackage,
-      config: this.config,
-      execa,
-      profile,
-    };
+    try {
+      const context = await ProjectContext.create(this.options);
+      context.profile = profile;
 
-    const results = [];
-    for (const checker of this.checkers) {
-      if (this.shouldRunChecker(checker, profile)) {
-        console.log(`🔍 Running ${checker.name}...`);
-        try {
-          const result = await checker.run(context);
-          results.push({ name: checker.name, ...result });
-          if (!result.success) {
-            console.error(`❌ ${checker.name} failed: ${result.message}`);
-            if (result.suggestedFix) {
-              console.error(`💡 Fix: ${result.suggestedFix}`);
-            }
+      // Auto-discover checkers from the tool's checkers directory
+      const checkersDir = join(process.cwd(), "src/checkers");
+      await this.registry.discover(checkersDir);
+
+      const checkers = this.registry.getCheckersForProfile(profile, context.config.skip);
+
+      console.log(`🔍 Executing ${checkers.length} checks...`);
+      const results = await this.runner.execute(checkers, context);
+
+      results.forEach(r => {
+        if (!r.success) {
+          console.error(`❌ ${r.name} failed: ${r.message}`);
+          if (r.suggestedFix) {
+            console.error(`💡 Fix: ${r.suggestedFix}`);
           }
-        } catch (error) {
-          results.push({ name: checker.name, success: false, message: error.message });
-          console.error(`❌ ${checker.name} error: ${error.message}`);
+        }
+      });
+
+      const allSuccess = results.every((r) => r.success);
+      if (allSuccess) {
+        console.log("✅ All checks passed!");
+      } else {
+        console.error("🚨 Some checks failed. Please fix the issues before committing.");
+        if (this.options.generateReport) {
+          const reportPath = await this.reporter.generateReport(results);
+          console.log(`📄 Report generated: ${reportPath}`);
         }
       }
-    }
 
-    const allSuccess = results.every((r) => r.success);
-    if (allSuccess) {
-      console.log("✅ All checks passed!");
-    } else {
-      console.error(
-        "🚨 Some checks failed. Please fix the issues before committing.",
-      );
-      if (this.options.generateReport) {
-        await this.generateReport(results);
-      }
-    }
-
-    return { allSuccess, results };
-  }
-
-  async generateReport(results) {
-    const { writeFile } = await import("node:fs/promises");
-    const { join } = await import("node:path");
-
-    const reportPath = join(this.root, "quality-report.md");
-    let content = "# 🚨 Quality Check Report\n\n";
-    content += `Generated on: ${new Date().toLocaleString()}\n\n`;
-    content += "## 📉 Results\n\n";
-    content += "| Checker | Status | Message |\n";
-    content += "| :--- | :--- | :--- |\n";
-
-    results.forEach((r) => {
-      const status = r.success ? "✅ Pass" : "❌ Fail";
-      content += `| ${r.name} | ${status} | ${r.message} |\n`;
-    });
-
-    const failures = results.filter((r) => !r.success);
-    const setupSuggestions = results.filter((r) => r.success && r.suggestedFix);
-
-    if (failures.length > 0) {
-      content += "## 🛠 How to fix\n\n";
-      failures.forEach((f) => {
-        content += `### ${f.name}\n`;
-        if (f.details) {
-          content += f.details + "\n\n";
-        } else if (f.suggestedFix) {
-          content += `- Run: \`${f.suggestedFix}\` to fix.\n`;
-        } else if (f.name.includes("Test")) {
-          content += `- Run: \`npm test\` to see test errors.\n`;
-        } else if (f.name.includes("Linting")) {
-          content +=
-            "- Run: \`npm run lint --fix\` or \`npm run lint:fix\` to fix.\n";
-        } else if (f.name.includes("Formatting")) {
-          content +=
-            "- Run: \`npm run format\` to fix formatting.\n";
-        } else if (f.name.includes("Commit Message")) {
-          content +=
-            "- Use format: \`feat: add feature\` or \`:emoji: message\`\n";
-        } else if (f.name.includes("Secret")) {
-          content +=
-            "- Remove secrets from files or add \`// cqc-disable secret\` comment.\n";
-        } else if (f.name.includes("Vulnerabilities")) {
-          content +=
-            "- Run: \`npm audit fix\` to fix vulnerabilities.\n";
-        }
-        content += "\n";
-      });
-    }
-
-    if (setupSuggestions.length > 0) {
-      content += "## 💡 Setup Suggestions\n\n";
-      setupSuggestions.forEach((s) => {
-        content += `### ${s.name}\n- ${s.message}\n- Run: \`${s.suggestedFix}\` to install necessary dependencies.\n\n`;
-      });
-    } else if (failures.length === 0) {
-      content += "## ✅ Results\n\nNo failures detected.";
-    }
-
-    content +=
-      "\n---\n*This report is automatically generated by commit-quality-check.*";
-
-    try {
-      await writeFile(reportPath, content, "utf8");
-      console.log(`📄 Report generated: ${reportPath}`);
+      return { allSuccess, results };
     } catch (error) {
-      console.error(`❌ Failed to generate report: ${error.message}`);
+      console.error(`❌ Execution failed: ${error.message}`);
+      return { allSuccess: false, results: [] };
     }
   }
 
-  shouldRunChecker(checker, profile) {
-    const p = profile || this.profile || "fast";
-    const skipped = this.config.skip || [];
-    if (skipped.includes(checker.name)) return false;
-    if (p === "full") return true;
-    return checker.profile === "fast" || !checker.profile;
-  }
 
-  async getProjectRoot() {
-    const { stdout } = await execa("git", ["rev-parse", "--show-toplevel"]);
-    return resolve(stdout.trim());
-  }
-
-  async detectPackageManager() {
-    if (!this.projectPackage) {
-      this.projectPackage = await this.readProjectPackage();
-    }
-
-    const pm = this.projectPackage.packageManager;
-    if (pm) {
-      if (pm.includes("pnpm")) return "pnpm";
-      if (pm.includes("yarn")) return "yarn";
-      if (pm.includes("bun")) return "bun";
-    }
-    return "npm";
-  }
-
-  async readProjectPackage() {
-    try {
-      const raw = await readFile(join(this.root, "package.json"), "utf8");
-      return JSON.parse(raw);
-    } catch (error) {
-      if (error instanceof SyntaxError) {
-        throw new Error(`Malformed package.json: ${error.message}`);
-      }
-      throw new Error(`Could not read package.json: ${error.message}`);
-    }
-  }
-
-  normalizeConfig(config) {
-    return {
-      staged: {
-        prettier: config.staged?.prettier ?? true,
-        eslint: config.staged?.eslint ?? true,
-      },
-      scripts: config.scripts || [],
-      skip: config.skip || [],
-    };
-  }
 }

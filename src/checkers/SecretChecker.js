@@ -1,4 +1,4 @@
-import { BaseChecker } from "./BaseChecker.js";
+import { BaseChecker } from "../core/BaseChecker.js";
 
 export class SecretChecker extends BaseChecker {
   constructor() {
@@ -7,8 +7,8 @@ export class SecretChecker extends BaseChecker {
   }
 
   async run(context) {
-    const { execa, root } = context;
-    
+    const { root } = context;
+
     const patterns = [
       { pattern: /api[_-]?key["']?\s*[:=]\s*["'][^"']+/gi, name: "API Key" },
       { pattern: /secret["']?\s*[:=]\s*["'][^"']+/gi, name: "Secret" },
@@ -28,23 +28,21 @@ export class SecretChecker extends BaseChecker {
     const ignoreComments = ["cqc-disable", "no-scan"];
 
     try {
-      const { stdout } = await execa("git", ["diff", "--cached", "--name-only"], {
-        cwd: root,
-      });
+      const result = await this.exec(context, ["git", "diff", "--cached", "--name-only"]);
+      const stdout = result.stdout || "";
       const files = stdout.split("\n").filter(Boolean);
       const secretsFound = [];
 
       for (const file of files) {
         if (ignoreFiles.includes(file)) continue;
-        
+
         const ext = file.includes(".") ? "." + file.split(".").pop() : "";
         if (skipExt.includes(ext.toLowerCase())) continue;
 
         try {
-          const { stdout: content } = await execa("git", ["show", `:0:${file}`], {
-            cwd: root,
-          });
-          
+          const result = await this.exec(context, ["git", "show", `:0:${file}`]);
+          const content = result.stdout || "";
+
           const lines = content.split("\n");
           for (const line of lines) {
             const ignoreLine = ignoreComments.some(c => line.includes(c));

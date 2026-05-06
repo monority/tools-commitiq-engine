@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { getProjectRoot } from "../src/utils/ProjectUtils.js";
 import { runCheck } from "./quality-staged.js";
 import { existsSync } from "node:fs";
+import readline from "node:readline";
 
 const projRoot = await getProjectRoot();
 const hookOn = existsSync(join(projRoot, ".husky", "pre-commit"));
@@ -31,7 +32,7 @@ const C = {
 function drawMenu() {
   console.clear();
   console.log(`\n${C.cyan}${C.bright}━━━ COMMIT QUALITY CHECK ━━━${C.reset}\n`);
-  
+
   options.forEach((opt, i) => {
     const isSelected = i === selected;
     const status = i === 0 && hookOn ? ` ${C.green}ON${C.reset}` : i === 1 && !hookOn ? ` ${C.red}OFF${C.reset}` : "";
@@ -39,7 +40,7 @@ function drawMenu() {
     const label = isSelected ? `${C.bright}${C.cyan}${opt.label}${C.reset}` : opt.label;
     console.log(`  ${arrow} ${label}${status}`);
   });
-  
+
   console.log(`\n${C.magenta}↑↓ Select  ENTER Confirm  Q Quit${C.reset}`);
 }
 
@@ -47,17 +48,22 @@ const stdin = process.stdin;
 const isRaw = stdin.isRaw;
 
 function setRawMode(enable) {
+  if (stdin.setRawMode) {
+    stdin.setRawMode(enable);
+  }
   if (enable) {
-    stdin.setRawMode && stdin.setRawMode(true);
     stdin.resume();
     stdin.setEncoding("utf8");
+  } else {
+    stdin.pause();
   }
 }
 
 async function runMenu() {
   drawMenu();
-  
+
   return new Promise((resolve) => {
+    readline.emitKeypressEvents(stdin);
     const onKey = (char, key) => {
       if (key.name === "up") {
         selected = Math.max(0, selected - 1);
@@ -77,7 +83,7 @@ async function runMenu() {
         resolve("quit");
       }
     };
-    
+
     stdin.on("keypress", onKey);
     setRawMode(true);
   });
@@ -85,57 +91,82 @@ async function runMenu() {
 
 async function main() {
   const cmd = process.argv[2];
-  
-  // Skip runCheck entirely - we just show menu
-  if (!cmd || cmd === "menu" || cmd === "m") {
-    const choice = await runMenu();
-    
-    if (choice === "enable") await enableHook();
-    else if (choice === "disable") await disableHook();
-    else if (choice === "status") await showStatus();
-    else if (choice === "staged") await runCheck({ fullProfile: false });
-    else if (choice === "check") await runCheck({ fullProfile: true });
-    else console.log(`${C.magenta}Bye!${C.reset}`);
+  const targetRoot = process.argv[3];
+
+  // Map short commands to internal actions
+  const commandMap = {
+    'e': 'enable',
+    'd': 'disable',
+    's': 'status',
+    'f': 'staged',
+    'c': 'check',
+    'm': 'menu'
+  };
+
+  let initialChoice = cmd;
+  if (commandMap[cmd]) initialChoice = commandMap[cmd];
+
+  if (targetRoot) {
+    console.log(`${C.cyan}Target project: ${targetRoot}${C.reset}`);
+  }
+
+  // If a direct command was provided (and it's not 'menu'), execute it once and exit
+  if (initialChoice && initialChoice !== 'menu') {
+    await executeAction(initialChoice, targetRoot);
     return;
   }
-  
-  // Direct commands - exit immediately
-  if (cmd === "enable" || cmd === "e") {
-    await enableHook();
-    return;
+
+  // Otherwise, enter the interactive loop
+  let choice = 'menu';
+  while (choice !== 'quit') {
+    if (choice === 'menu') {
+      choice = await runMenu();
+    } else {
+      await executeAction(choice, targetRoot);
+      // After action, return to menu
+      choice = 'menu';
+    }
   }
-  if (cmd === "disable" || cmd === "d") {
-    await disableHook();
-    return;
+  console.log(`${C.magenta}Bye!${C.reset}`);
+}
+
+async function executeAction(choice, root = null) {
+  switch (choice) {
+    case "enable": await enableHook(); break;
+    case "disable": await disableHook(); break;
+    case "status": await showStatus(); break;
+    case "staged": await runCheck({ fullProfile: false, root }); break;
+    case "check": await runCheck({ fullProfile: true, root }); break;
+    case "quit": break; // Handled by loop
+    default:
+      if (choice) console.log(`${C.yellow}Unknown command: ${choice}${C.reset}`);
   }
-  if (cmd === "status" || cmd === "s") {
-    await showStatus();
-    return;
+  if (choice !== 'quit') {
+    if (stdin.isTTY) {
+      console.log(`\n${C.yellow}Press any key to return to menu...${C.reset}`);
+      await new Promise(resolve => {
+        try {
+          stdin.setRawMode(true);
+          stdin.resume();
+          stdin.on('data', () => {
+            stdin.removeListener('data', resolve);
+            resolve();
+          });
+        } catch (e) {
+          resolve();
+        }
+      });
+    } else {
+      // In non-TTY environments, we just resolve immediately
+      await Promise.resolve();
+    }
   }
-  if (cmd === "staged" || cmd === "f") {
-    await runCheck({ fullProfile: false });
-    return;
-  }
-  if (cmd === "check" || cmd === "c") {
-    await runCheck({ fullProfile: true });
-    return;
-  }
-  
-  // Menu mode - interactive
-  const choice = await runMenu();
-  
-  if (choice === "enable") await enableHook();
-  else if (choice === "disable") await disableHook();
-  else if (choice === "status") await showStatus();
-  else if (choice === "staged") await runCheck({ fullProfile: false });
-  else if (choice === "check") await runCheck({ fullProfile: true });
-  else console.log(`${C.magenta}Bye!${C.reset}`);
 }
 
 async function enableHook() {
   const p = join(projRoot, ".husky", "pre-commit");
   const body = `#!/usr/bin/env sh\nnpm exec -- cqc check\n`;
-  try { await mkdir(join(projRoot, ".husky"), { recursive: true }); } catch {}
+  try { await mkdir(join(projRoot, ".husky"), { recursive: true }); } catch { }
   await writeFile(p, body, "utf8");
   console.log(`${C.green}✅ Hook enabled${C.reset}`);
 }

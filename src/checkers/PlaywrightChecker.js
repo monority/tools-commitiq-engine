@@ -1,4 +1,4 @@
-import { BaseChecker } from "./BaseChecker.js";
+import { BaseChecker } from "../core/BaseChecker.js";
 
 export class PlaywrightChecker extends BaseChecker {
   constructor() {
