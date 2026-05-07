@@ -3,6 +3,7 @@ import { existsSync } from "node:fs";
 import { chmod, mkdir, readFile, unlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import readline from "node:readline";
+import { execa } from "execa";
 import { CommitMsgChecker } from "../src/checkers/CommitMsgChecker.js";
 import { createQualityEngine } from "../src/index.js";
 import { getProjectRoot } from "../src/utils/ProjectUtils.js";
@@ -52,15 +53,40 @@ async function getHookState() {
   const commitMsgExists = existsSync(commitMsgPath);
   const preCommitValid = await hasHookCommand(preCommitPath, PRE_COMMIT_COMMAND);
   const commitMsgValid = await hasHookCommand(commitMsgPath, COMMIT_MSG_COMMAND);
-  const enabled = preCommitValid && commitMsgValid;
+  const hooksPath = await getGitHooksPath();
+  const hooksPathValid = hooksPath === ".husky";
+  const enabled = preCommitValid && commitMsgValid && hooksPathValid;
   const broken = (preCommitExists || commitMsgExists) && !enabled;
 
   return {
     preCommit: preCommitValid,
     commitMsg: commitMsgValid,
+    hooksPath: hooksPathValid,
     enabled,
     broken,
   };
+}
+
+async function getGitHooksPath() {
+  try {
+    const { stdout } = await execa("git", ["config", "--get", "core.hooksPath"], {
+      cwd: projRoot,
+    });
+    return stdout.trim().replace(/\\/g, "/");
+  } catch {
+    return "";
+  }
+}
+
+async function setGitHooksPath() {
+  await execa("git", ["config", "core.hooksPath", ".husky"], { cwd: projRoot });
+}
+
+async function unsetGitHooksPathIfManaged() {
+  const hooksPath = await getGitHooksPath();
+  if (hooksPath === ".husky") {
+    await execa("git", ["config", "--unset", "core.hooksPath"], { cwd: projRoot });
+  }
 }
 
 async function readProjectPackageFile() {
@@ -424,6 +450,7 @@ async function enableHook() {
   await writeFile(commitMsgPath, COMMIT_MSG_HOOK, "utf8");
   await chmod(preCommitPath, 0o755);
   await chmod(commitMsgPath, 0o755);
+  await setGitHooksPath();
   console.log(`${C.green}Hooks enabled${C.reset}`);
 }
 
@@ -455,6 +482,8 @@ async function disableHook() {
     // ignore
   }
 
+  await unsetGitHooksPathIfManaged();
+
   console.log(
     removed ? `${C.green}Hooks disabled${C.reset}` : `${C.yellow}Already off${C.reset}`,
   );
@@ -476,6 +505,7 @@ async function showStatus() {
     `hook: ${stateLabel}\n` +
     `pre-commit: ${hookState.preCommit ? `${C.green}OK` : `${C.red}MISSING/BAD`}${C.reset}\n` +
     `commit-msg: ${hookState.commitMsg ? `${C.green}OK` : `${C.red}MISSING/BAD`}${C.reset}\n` +
+    `core.hooksPath: ${hookState.hooksPath ? `${C.green}.husky` : `${C.red}MISSING/BAD`}${C.reset}\n` +
     `checks enabled: ${C.green}${enabledCount}${C.reset}/${allCheckers.length}`,
   );
 }
