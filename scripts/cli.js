@@ -105,11 +105,11 @@ async function removeAutoPushHookIfSafe(filePath) {
       .filter((line) => line && !line.startsWith("#"));
 
     const hasPush = commandLines.some((line) => /\bgit\s+push\b/.test(line));
-    const onlyPushCommands = commandLines.every((line) =>
-      /\bgit\s+push\b/.test(line) || /^(npm exec -- )?cqc\b/.test(line),
+    const cqcRelated = commandLines.some((line) =>
+      /\bcqc\b/.test(line) || /\bhusky\b/.test(line) || /\bgit\s+push\b/.test(line),
     );
 
-    if (hasPush && onlyPushCommands) {
+    if (hasPush && cqcRelated) {
       await unlink(filePath);
       return true;
     }

@@ -92,6 +92,38 @@ test("enable removes legacy auto-push hook", async () => {
   }
 });
 
+test("enable removes husky-style auto-push hook", async () => {
+  const root = await mkdtemp(join(tmpdir(), "cqc-cli-husky-auto-push-"));
+
+  try {
+    await execa("git", ["init"], { cwd: root });
+    await writeFile(
+      join(root, "package.json"),
+      JSON.stringify({ name: "tmp", version: "1.0.0" }),
+    );
+    await mkdir(join(root, ".husky"));
+    await writeFile(
+      join(root, ".husky", "post-commit"),
+      [
+        "#!/usr/bin/env sh",
+        '. "$(dirname "$0")/_/husky.sh"',
+        "npm exec -- cqc check && git push",
+        "",
+      ].join("\n"),
+    );
+
+    await execa("node", [cliPath, "enable"], { cwd: root });
+
+    const result = await access(join(root, ".husky", "post-commit"))
+      .then(() => true)
+      .catch(() => false);
+
+    assert.equal(result, false);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test("auto-push command toggles post-commit hook and config", async () => {
   const root = await mkdtemp(join(tmpdir(), "cqc-cli-auto-push-toggle-"));
 
