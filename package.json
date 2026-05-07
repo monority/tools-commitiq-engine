@@ -43,6 +43,7 @@
     "skip": [
       "Debug Artifacts",
       "Playwright Tests"
-    ]
+    ],
+    "autoPush": false
   }
 }

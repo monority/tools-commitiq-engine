@@ -13,13 +13,16 @@ const projRoot = await getProjectRoot();
 const packageJsonPath = join(projRoot, "package.json");
 const PRE_COMMIT_HOOK = "#!/usr/bin/env sh\nnpm exec -- cqc staged\n";
 const COMMIT_MSG_HOOK = "#!/usr/bin/env sh\nnpm exec -- cqc commit-msg \"$1\"\n";
+const AUTO_PUSH_HOOK = "#!/usr/bin/env sh\nnpm exec -- cqc check && git push\n";
 const PRE_COMMIT_COMMAND = "npm exec -- cqc staged";
 const COMMIT_MSG_COMMAND = "npm exec -- cqc commit-msg \"$1\"";
+const AUTO_PUSH_COMMAND = "git push";
 const AUTO_PUSH_HOOKS = ["post-commit", "pre-push"];
 
 let selected = 0;
 const options = [
   { label: "Toggle hook", action: "toggle" },
+  { label: "Toggle auto-push", action: "auto-push" },
   { label: "Configure checks", action: "config" },
   { label: "Run single check", action: "single" },
   { label: "Status", action: "status" },
@@ -50,10 +53,12 @@ async function hasHookCommand(filePath, expectedCommand) {
 async function getHookState() {
   const preCommitPath = join(projRoot, ".husky", "pre-commit");
   const commitMsgPath = join(projRoot, ".husky", "commit-msg");
+  const autoPushPath = join(projRoot, ".husky", "post-commit");
   const preCommitExists = existsSync(preCommitPath);
   const commitMsgExists = existsSync(commitMsgPath);
   const preCommitValid = await hasHookCommand(preCommitPath, PRE_COMMIT_COMMAND);
   const commitMsgValid = await hasHookCommand(commitMsgPath, COMMIT_MSG_COMMAND);
+  const autoPushValid = await hasHookCommand(autoPushPath, AUTO_PUSH_COMMAND);
   const hooksPath = await getGitHooksPath();
   const hooksPathValid = hooksPath === ".husky";
   const enabled = preCommitValid && commitMsgValid && hooksPathValid;
@@ -62,6 +67,7 @@ async function getHookState() {
   return {
     preCommit: preCommitValid,
     commitMsg: commitMsgValid,
+    autoPush: autoPushValid,
     hooksPath: hooksPathValid,
     enabled,
     broken,
@@ -157,6 +163,21 @@ async function getSkippedChecks() {
   return new Set(projectPackage.gitQuality?.skip || []);
 }
 
+async function isAutoPushConfigured() {
+  const projectPackage = await readProjectPackageFile();
+  return projectPackage.gitQuality?.autoPush === true;
+}
+
+async function saveAutoPushConfig(enabled) {
+  const projectPackage = await readProjectPackageFile();
+  projectPackage.gitQuality = {
+    ...(projectPackage.gitQuality || {}),
+    autoPush: enabled,
+  };
+
+  await writeProjectPackageFile(projectPackage);
+}
+
 async function saveSkippedChecks(skipSet) {
   const projectPackage = await readProjectPackageFile();
   const nextSkip = [...skipSet].sort((a, b) => a.localeCompare(b));
@@ -185,6 +206,10 @@ async function drawMenu() {
       if (hookState.enabled) status = ` ${C.green}ON${C.reset}`;
       else if (hookState.broken) status = ` ${C.yellow}BROKEN${C.reset}`;
       else status = ` ${C.red}OFF${C.reset}`;
+    }
+
+    if (opt.action === "auto-push") {
+      status = hookState.autoPush ? ` ${C.green}ON${C.reset}` : ` ${C.red}OFF${C.reset}`;
     }
 
     const arrow = isSelected ? `${C.yellow}>${C.reset}` : " ";
@@ -442,6 +467,9 @@ async function executeAction(choice, arg = null) {
     case "toggle":
       await toggleHook();
       break;
+    case "auto-push":
+      await toggleAutoPush();
+      break;
     case "config":
       await configureChecks();
       break;
@@ -488,10 +516,49 @@ async function enableHook() {
   await chmod(preCommitPath, 0o755);
   await chmod(commitMsgPath, 0o755);
   await setGitHooksPath();
-  const removedAutoPush = await removeAutoPushHooks();
+  const autoPushEnabled = await isAutoPushConfigured();
+  const removedAutoPush = autoPushEnabled
+    ? false
+    : await removeAutoPushHooks();
+  if (autoPushEnabled) {
+    await enableAutoPushHook();
+  }
   console.log(`${C.green}Hooks enabled${C.reset}`);
   if (removedAutoPush) {
     console.log(`${C.yellow}Removed auto-push hook${C.reset}`);
+  }
+}
+
+async function enableAutoPushHook() {
+  const huskyDir = join(projRoot, ".husky");
+  const autoPushPath = join(huskyDir, "post-commit");
+
+  await mkdir(huskyDir, { recursive: true });
+  await writeFile(autoPushPath, AUTO_PUSH_HOOK, "utf8");
+  await chmod(autoPushPath, 0o755);
+}
+
+async function disableAutoPushHook() {
+  const postCommitPath = join(projRoot, ".husky", "post-commit");
+  const prePushPath = join(projRoot, ".husky", "pre-push");
+  const removedPostCommit = await removeAutoPushHookIfSafe(postCommitPath);
+  const removedPrePush = await removeAutoPushHookIfSafe(prePushPath);
+  return removedPostCommit || removedPrePush;
+}
+
+async function toggleAutoPush() {
+  const enabled = await isAutoPushConfigured();
+  const nextEnabled = !enabled;
+
+  await saveAutoPushConfig(nextEnabled);
+
+  if (nextEnabled) {
+    await enableHook();
+    await enableAutoPushHook();
+    console.log(`${C.green}Auto-push enabled${C.reset}`);
+  } else {
+    await disableAutoPushHook();
+    console.log(`${C.green}Auto-push disabled${C.reset}`);
   }
 }
 
@@ -546,6 +613,7 @@ async function showStatus() {
     `hook: ${stateLabel}\n` +
     `pre-commit: ${hookState.preCommit ? `${C.green}OK` : `${C.red}MISSING/BAD`}${C.reset}\n` +
     `commit-msg: ${hookState.commitMsg ? `${C.green}OK` : `${C.red}MISSING/BAD`}${C.reset}\n` +
+    `auto-push: ${hookState.autoPush ? `${C.green}ON` : `${C.red}OFF`}${C.reset}\n` +
     `core.hooksPath: ${hookState.hooksPath ? `${C.green}.husky` : `${C.red}MISSING/BAD`}${C.reset}\n` +
     `checks enabled: ${C.green}${enabledCount}${C.reset}/${allCheckers.length}`,
   );
@@ -564,7 +632,9 @@ async function main() {
     c: "check",
     g: "config",
     r: "single",
+    p: "auto-push",
     m: "menu",
+    "auto-push": "auto-push",
     "commit-msg": "commit-msg",
   };
 

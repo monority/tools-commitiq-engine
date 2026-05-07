@@ -23,6 +23,9 @@ test("enable writes husky hooks and configures git hooksPath", async () => {
 
     const preCommit = await readFile(join(root, ".husky", "pre-commit"), "utf8");
     const commitMsg = await readFile(join(root, ".husky", "commit-msg"), "utf8");
+    const postCommitExists = await access(join(root, ".husky", "post-commit"))
+      .then(() => true)
+      .catch(() => false);
     const { stdout: hooksPath } = await execa(
       "git",
       ["config", "--get", "core.hooksPath"],
@@ -31,6 +34,7 @@ test("enable writes husky hooks and configures git hooksPath", async () => {
 
     assert.match(preCommit, /npm exec -- cqc staged/);
     assert.match(commitMsg, /npm exec -- cqc commit-msg "\$1"/);
+    assert.equal(postCommitExists, false);
     assert.equal(hooksPath.trim(), ".husky");
   } finally {
     await rm(root, { recursive: true, force: true });
@@ -83,6 +87,38 @@ test("enable removes legacy auto-push hook", async () => {
       .catch(() => false);
 
     assert.equal(result, false);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("auto-push command toggles post-commit hook and config", async () => {
+  const root = await mkdtemp(join(tmpdir(), "cqc-cli-auto-push-toggle-"));
+
+  try {
+    await execa("git", ["init"], { cwd: root });
+    await writeFile(
+      join(root, "package.json"),
+      JSON.stringify({ name: "tmp", version: "1.0.0" }),
+    );
+
+    await execa("node", [cliPath, "auto-push"], { cwd: root });
+
+    const postCommit = await readFile(join(root, ".husky", "post-commit"), "utf8");
+    const packageJson = JSON.parse(await readFile(join(root, "package.json"), "utf8"));
+
+    assert.match(postCommit, /npm exec -- cqc check && git push/);
+    assert.equal(packageJson.gitQuality.autoPush, true);
+
+    await execa("node", [cliPath, "auto-push"], { cwd: root });
+
+    const postCommitExists = await access(join(root, ".husky", "post-commit"))
+      .then(() => true)
+      .catch(() => false);
+    const updatedPackageJson = JSON.parse(await readFile(join(root, "package.json"), "utf8"));
+
+    assert.equal(postCommitExists, false);
+    assert.equal(updatedPackageJson.gitQuality.autoPush, false);
   } finally {
     await rm(root, { recursive: true, force: true });
   }

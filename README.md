@@ -53,6 +53,7 @@ Run `npx cqc` to show interactive menu (arrow keys + enter):
 ━━━ COMMIT QUALITY CHECK ━━━
 
   ▶ Toggle hook ON
+    Toggle auto-push OFF
     Configure checks
     Run single check
     Status
@@ -69,6 +70,7 @@ Or use direct commands:
 | :--- | :--- | :--- |
 | `npx cqc` | - | Interactive menu |
 | `npx cqc toggle` | `t` | Toggle pre-commit and commit-msg hooks |
+| `npx cqc auto-push` | `p` | Toggle optional post-commit auto-push |
 | `npx cqc config` | `g` | Open the checker toggle menu |
 | `npx cqc single` | `r` | Pick and run one checker |
 | `npx cqc enable` | `e` | Enable auto-check |
@@ -84,6 +86,39 @@ After enabling, `pre-commit` runs staged checks and `commit-msg` validates commi
 ```bash
 git commit --no-verify -m "feat: ..."
 ```
+
+### Why Hook Status Can Be BROKEN
+
+`npx cqc status` shows `BROKEN` when CQC finds hook files, but the Git hook setup is incomplete or not managed by CQC.
+
+CQC expects all of these to be true:
+- `.husky/pre-commit` contains `npm exec -- cqc staged`
+- `.husky/commit-msg` contains `npm exec -- cqc commit-msg "$1"`
+- `git config core.hooksPath` points to `.husky`
+
+Common causes:
+- hooks were created by an older CQC version
+- `.husky/pre-commit` or `.husky/commit-msg` was edited manually
+- Husky exists, but Git still points to another hooks directory
+- only one of the two CQC hooks exists
+- another tool owns the same hook file
+
+Check the setup:
+
+```bash
+npx cqc status
+git config --get core.hooksPath
+cat .husky/pre-commit
+cat .husky/commit-msg
+```
+
+Repair the CQC hooks:
+
+```bash
+npx cqc enable
+```
+
+If you intentionally use custom hooks, keep the CQC commands inside them instead of replacing them.
 
 ##  How It Works
 
@@ -120,6 +155,7 @@ You can override the auto-detection by adding a `gitQuality` object to your `pac
   "gitQuality": {
     "skip": ["Secret Scanner", "Dependencies Vulnerabilities"],
     "ignore": ["dist/", "src/generated/", "fixtures/example.js"],
+    "autoPush": false,
     "staged": {
       "prettier": true,
       "eslint": true
@@ -130,6 +166,7 @@ You can override the auto-detection by adding a `gitQuality` object to your `pac
 
 - `skip`: An array of checker names to skip (e.g., `"Secret Scanner"`, `"Dependencies Vulnerabilities"`).
 - `ignore`: Repo-relative files or folders to ignore during staged-file checks (e.g., `"dist/"`, `"src/generated/"`, `"fixtures/example.js"`, `"*.snap"`).
+- `autoPush`: When `true`, creates an optional `post-commit` hook that runs full checks and `git push` after a successful commit. Defaults to `false`.
 - `staged.prettier`: Enable/disable automatic Prettier fixing on staged files.
 - `staged.eslint`: Enable/disable automatic ESLint fixing on staged files.
 
