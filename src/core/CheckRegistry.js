@@ -55,11 +55,13 @@ export class CheckRegistry {
      * @param {string} profile - 'fast' or 'full'
      * @param {string[]} skipList - List of checker names to skip
      */
-    getCheckersForProfile(profile = "fast", skipList = []) {
+    getCheckersForProfile(profile = "fast", skipList = [], onlyNames = []) {
         const activeCheckers = [];
+        const onlySet = new Set(onlyNames);
 
         for (const checker of this.checkers.values()) {
-            if (skipList.includes(checker.name)) continue;
+            if (onlySet.size > 0 && !onlySet.has(checker.name)) continue;
+            if (onlySet.size === 0 && skipList.includes(checker.name)) continue;
 
             if (profile === "full") {
                 activeCheckers.push(checker);

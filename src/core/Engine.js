@@ -18,6 +18,13 @@ export class QualityEngine {
     return this;
   }
 
+  async loadCheckers() {
+    const __dirname = dirname(fileURLToPath(import.meta.url));
+    const checkersDir = join(__dirname, "..", "checkers");
+    await this.registry.discover(checkersDir);
+    return this;
+  }
+
   async run(profile = "fast") {
     console.log(`🚀 Running Quality Check [Profile: ${profile}]`);
 
@@ -25,12 +32,11 @@ export class QualityEngine {
       const context = await ProjectContext.create(this.options);
       context.profile = profile;
 
-      // Auto-discover checkers from the tool's installation directory
-      const __dirname = dirname(fileURLToPath(import.meta.url));
-      const checkersDir = join(__dirname, "..", "checkers");
-      await this.registry.discover(checkersDir);
+      await this.loadCheckers();
 
-      const checkers = this.registry.getCheckersForProfile(profile, context.config.skip);
+      const onlyCheckNames = this.options.onlyCheckNames || [];
+      const skipList = onlyCheckNames.length > 0 ? [] : context.config.skip;
+      const checkers = this.registry.getCheckersForProfile(profile, skipList, onlyCheckNames);
 
       console.log(`🔍 Executing ${checkers.length} checks...`);
       const results = await this.runner.execute(checkers, context);

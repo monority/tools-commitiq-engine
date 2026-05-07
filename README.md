@@ -51,6 +51,8 @@ Run `npx cqc` to show interactive menu (arrow keys + enter):
 ━━━ COMMIT QUALITY CHECK ━━━
 
   ▶ Toggle hook ON
+    Configure checks
+    Run single check
     Status
     Staged check
     Full check
@@ -65,6 +67,8 @@ Or use direct commands:
 | :--- | :--- | :--- |
 | `npx cqc` | - | Interactive menu |
 | `npx cqc toggle` | `t` | Toggle pre-commit and commit-msg hooks |
+| `npx cqc config` | `g` | Open the checker toggle menu |
+| `npx cqc single` | `r` | Pick and run one checker |
 | `npx cqc enable` | `e` | Enable auto-check |
 | `npx cqc disable` | `d` | Disable auto-check |
 | `npx cqc status` | `s` | Show status |
@@ -86,9 +90,11 @@ When running `cqc check`, the tool runs these checkers:
 1. **Linting (ESLint)**: Runs `eslint --fix` on staged JS/TS files.
 2. **Formatting (Prettier)**: Runs `prettier --write` on staged files.
 3. **Secret Scanner**: Scans for API keys, tokens, passwords.
-4. **Dependencies Vulnerabilities**: Runs `npm audit` to check vulnerabilities.
-5. **Test Suite**: Runs your test script (jest, vitest, etc.).
-6. **Playwright Tests** (full profile only): Runs e2e tests.
+4. **Type Check**: Runs `typecheck`, `check-types`, or `types` if present.
+5. **Dependencies Vulnerabilities**: Runs `npm audit` to check vulnerabilities.
+6. **Test Suite**: Runs your test script (jest, vitest, etc.).
+7. **Build** (full profile only): Runs `build` or `compile` if present.
+8. **Playwright Tests** (full profile only): Runs e2e tests.
 
 Commit message validation runs in the `commit-msg` hook via `npx cqc commit-msg <file>`.
 
@@ -98,6 +104,7 @@ If no custom configuration is provided, `cqc` looks for these scripts in your `p
 - `typecheck` | `check-types` | `types`
 - `test:unit` | `unit`
 - `test` | `test:ci`
+- `build` | `compile`
 - `test:e2e` | `e2e` | `playwright` | `test:playwright`
 
 ##  Configuration
@@ -119,6 +126,8 @@ You can override the auto-detection by adding a `gitQuality` object to your `pac
 - `skip`: An array of checker names to skip (e.g., `"Secret Scanner"`, `"Dependencies Vulnerabilities"`).
 - `staged.prettier`: Enable/disable automatic Prettier fixing on staged files.
 - `staged.eslint`: Enable/disable automatic ESLint fixing on staged files.
+
+The interactive menu can also toggle each checker on or off and save the result back into `gitQuality.skip`.
 
 ### Ignoring Secrets
 

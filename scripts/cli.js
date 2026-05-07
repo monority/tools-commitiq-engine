@@ -4,10 +4,12 @@ import { chmod, mkdir, readFile, unlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import readline from "node:readline";
 import { CommitMsgChecker } from "../src/checkers/CommitMsgChecker.js";
+import { createQualityEngine } from "../src/index.js";
 import { getProjectRoot } from "../src/utils/ProjectUtils.js";
 import { runCheck } from "./quality-staged.js";
 
 const projRoot = await getProjectRoot();
+const packageJsonPath = join(projRoot, "package.json");
 const PRE_COMMIT_HOOK = "#!/usr/bin/env sh\nnpm exec -- cqc staged\n";
 const COMMIT_MSG_HOOK = "#!/usr/bin/env sh\nnpm exec -- cqc commit-msg \"$1\"\n";
 const PRE_COMMIT_COMMAND = "npm exec -- cqc staged";
@@ -16,6 +18,8 @@ const COMMIT_MSG_COMMAND = "npm exec -- cqc commit-msg \"$1\"";
 let selected = 0;
 const options = [
   { label: "Toggle hook", action: "toggle" },
+  { label: "Configure checks", action: "config" },
+  { label: "Run single check", action: "single" },
   { label: "Status", action: "status" },
   { label: "Staged check", action: "staged" },
   { label: "Full check", action: "check" },
@@ -59,22 +63,67 @@ async function getHookState() {
   };
 }
 
+async function readProjectPackageFile() {
+  const raw = await readFile(packageJsonPath, "utf8");
+  return JSON.parse(raw);
+}
+
+async function writeProjectPackageFile(projectPackage) {
+  await writeFile(packageJsonPath, `${JSON.stringify(projectPackage, null, 2)}\n`, "utf8");
+}
+
+async function getAvailableCheckers() {
+  const engine = createQualityEngine({ root: projRoot });
+  await engine.loadCheckers();
+
+  return engine.registry.allCheckers
+    .map((checker) => ({
+      name: checker.name,
+      profile: checker.profile || "fast",
+    }))
+    .sort((a, b) => {
+      if (a.profile !== b.profile) {
+        return a.profile === "fast" ? -1 : 1;
+      }
+      return a.name.localeCompare(b.name);
+    });
+}
+
+async function getSkippedChecks() {
+  const projectPackage = await readProjectPackageFile();
+  return new Set(projectPackage.gitQuality?.skip || []);
+}
+
+async function saveSkippedChecks(skipSet) {
+  const projectPackage = await readProjectPackageFile();
+  const nextSkip = [...skipSet].sort((a, b) => a.localeCompare(b));
+
+  projectPackage.gitQuality = {
+    ...(projectPackage.gitQuality || {}),
+    skip: nextSkip,
+  };
+
+  await writeProjectPackageFile(projectPackage);
+}
+
 async function drawMenu() {
   const hookState = await getHookState();
   console.clear();
   console.log(`\n${C.cyan}${C.bright}COMMIT QUALITY CHECK${C.reset}\n`);
 
-  options.forEach((opt, i) => {
-    const isSelected = i === selected;
+  options.forEach((opt, index) => {
+    const isSelected = index === selected;
     const label = isSelected
       ? `${C.bright}${C.cyan}${opt.label}${C.reset}`
       : opt.label;
     let status = "";
+
     if (opt.action === "toggle") {
       if (hookState.enabled) status = ` ${C.green}ON${C.reset}`;
       else if (hookState.broken) status = ` ${C.yellow}BROKEN${C.reset}`;
       else status = ` ${C.red}OFF${C.reset}`;
     }
+
     const arrow = isSelected ? `${C.yellow}>${C.reset}` : " ";
     console.log(`  ${arrow} ${label}${status}`);
   });
@@ -148,6 +197,161 @@ async function runMenu() {
   });
 }
 
+function drawChecklist(title, items, cursor, instructions) {
+  console.clear();
+  console.log(`\n${C.cyan}${C.bright}${title}${C.reset}\n`);
+
+  items.forEach((item, index) => {
+    const isSelected = index === cursor;
+    const arrow = isSelected ? `${C.yellow}>${C.reset}` : " ";
+    const marker = item.enabled ? `${C.green}[x]${C.reset}` : `${C.red}[ ]${C.reset}`;
+    const profile = item.profile === "full"
+      ? `${C.yellow}(full)${C.reset}`
+      : `${C.green}(fast)${C.reset}`;
+    const label = isSelected
+      ? `${C.bright}${C.cyan}${item.name}${C.reset}`
+      : item.name;
+    console.log(`  ${arrow} ${marker} ${label} ${profile}`);
+  });
+
+  console.log(`\n${C.magenta}${instructions}${C.reset}`);
+}
+
+async function configureChecks() {
+  if (!process.stdin.isTTY) {
+    console.log("Interactive check configuration requires a TTY.");
+    return;
+  }
+
+  const checkers = await getAvailableCheckers();
+  const skipSet = await getSkippedChecks();
+  let cursor = 0;
+  const items = checkers.map((checker) => ({
+    ...checker,
+    enabled: !skipSet.has(checker.name),
+  }));
+
+  drawChecklist("CONFIGURE CHECKS", items, cursor, "Arrows move  SPACE toggle  ENTER save  Q cancel");
+
+  return new Promise((resolve) => {
+    readline.emitKeypressEvents(process.stdin);
+
+    const onKey = async (_, key) => {
+      if (key?.name === "up") {
+        cursor = Math.max(0, cursor - 1);
+        drawChecklist("CONFIGURE CHECKS", items, cursor, "Arrows move  SPACE toggle  ENTER save  Q cancel");
+        return;
+      }
+
+      if (key?.name === "down") {
+        cursor = Math.min(items.length - 1, cursor + 1);
+        drawChecklist("CONFIGURE CHECKS", items, cursor, "Arrows move  SPACE toggle  ENTER save  Q cancel");
+        return;
+      }
+
+      if (key?.name === "space") {
+        items[cursor].enabled = !items[cursor].enabled;
+        drawChecklist("CONFIGURE CHECKS", items, cursor, "Arrows move  SPACE toggle  ENTER save  Q cancel");
+        return;
+      }
+
+      if (key?.name === "return" || key?.name === "enter") {
+        process.stdin.removeListener("keypress", onKey);
+        setRawMode(false);
+        const nextSkipSet = new Set(
+          items.filter((item) => !item.enabled).map((item) => item.name),
+        );
+        await saveSkippedChecks(nextSkipSet);
+        console.clear();
+        console.log(`${C.green}Check configuration saved${C.reset}`);
+        resolve();
+        return;
+      }
+
+      if (key?.name === "q" || key?.ctrl && key?.name === "c" || key?.name === "escape") {
+        process.stdin.removeListener("keypress", onKey);
+        setRawMode(false);
+        console.clear();
+        console.log(`${C.yellow}Check configuration cancelled${C.reset}`);
+        resolve();
+      }
+    };
+
+    process.stdin.on("keypress", onKey);
+    setRawMode(true);
+  });
+}
+
+async function runSingleCheckMenu(rootOverride = null) {
+  if (!process.stdin.isTTY) {
+    console.log("Interactive single-check mode requires a TTY.");
+    return;
+  }
+
+  const checkers = await getAvailableCheckers();
+  let cursor = 0;
+
+  drawChecklist(
+    "RUN SINGLE CHECK",
+    checkers.map((checker) => ({ ...checker, enabled: true })),
+    cursor,
+    "Arrows move  ENTER run selected check  Q cancel",
+  );
+
+  return new Promise((resolve) => {
+    readline.emitKeypressEvents(process.stdin);
+
+    const onKey = async (_, key) => {
+      if (key?.name === "up") {
+        cursor = Math.max(0, cursor - 1);
+        drawChecklist(
+          "RUN SINGLE CHECK",
+          checkers.map((checker) => ({ ...checker, enabled: true })),
+          cursor,
+          "Arrows move  ENTER run selected check  Q cancel",
+        );
+        return;
+      }
+
+      if (key?.name === "down") {
+        cursor = Math.min(checkers.length - 1, cursor + 1);
+        drawChecklist(
+          "RUN SINGLE CHECK",
+          checkers.map((checker) => ({ ...checker, enabled: true })),
+          cursor,
+          "Arrows move  ENTER run selected check  Q cancel",
+        );
+        return;
+      }
+
+      if (key?.name === "return" || key?.name === "enter") {
+        process.stdin.removeListener("keypress", onKey);
+        setRawMode(false);
+        console.clear();
+        const selectedChecker = checkers[cursor];
+        await runCheck({
+          fullProfile: selectedChecker.profile === "full",
+          onlyCheckNames: [selectedChecker.name],
+          root: rootOverride || projRoot,
+        });
+        resolve();
+        return;
+      }
+
+      if (key?.name === "q" || key?.ctrl && key?.name === "c" || key?.name === "escape") {
+        process.stdin.removeListener("keypress", onKey);
+        setRawMode(false);
+        console.clear();
+        console.log(`${C.yellow}Single check cancelled${C.reset}`);
+        resolve();
+      }
+    };
+
+    process.stdin.on("keypress", onKey);
+    setRawMode(true);
+  });
+}
+
 async function runCommitMsg(commitMsgPath) {
   const checker = new CommitMsgChecker();
   const result = await checker.run({
@@ -156,13 +360,13 @@ async function runCommitMsg(commitMsgPath) {
   });
 
   if (result.success) {
-    console.log(`\u2714 Commit Message Quality: ${result.message}`);
+    console.log("Commit Message Quality: " + result.message);
     return;
   }
 
-  console.error(`\u274c Commit Message Quality: ${result.message}`);
+  console.error("Commit Message Quality: " + result.message);
   if (result.suggestedFix) {
-    console.error(`\u{1F4A1} Fix: ${result.suggestedFix}`);
+    console.error(`Fix: ${result.suggestedFix}`);
   }
   if (result.details) {
     console.error(result.details);
@@ -175,6 +379,12 @@ async function executeAction(choice, arg = null) {
     case "toggle":
       await toggleHook();
       break;
+    case "config":
+      await configureChecks();
+      break;
+    case "single":
+      await runSingleCheckMenu(arg);
+      break;
     case "enable":
       await enableHook();
       break;
@@ -185,10 +395,10 @@ async function executeAction(choice, arg = null) {
       await showStatus();
       break;
     case "staged":
-      await runCheck({ fullProfile: false, root: arg });
+      await runCheck({ fullProfile: false, root: arg || projRoot });
       break;
     case "check":
-      await runCheck({ fullProfile: true, root: arg });
+      await runCheck({ fullProfile: true, root: arg || projRoot });
       break;
     case "commit-msg":
       await runCommitMsg(arg);
@@ -252,6 +462,9 @@ async function disableHook() {
 
 async function showStatus() {
   const hookState = await getHookState();
+  const skippedChecks = await getSkippedChecks();
+  const allCheckers = await getAvailableCheckers();
+  const enabledCount = allCheckers.length - skippedChecks.size;
   const stateLabel = hookState.enabled
     ? `${C.green}ON${C.reset}`
     : hookState.broken
@@ -262,7 +475,8 @@ async function showStatus() {
     `\n${C.cyan}STATUS${C.reset}\n` +
     `hook: ${stateLabel}\n` +
     `pre-commit: ${hookState.preCommit ? `${C.green}OK` : `${C.red}MISSING/BAD`}${C.reset}\n` +
-    `commit-msg: ${hookState.commitMsg ? `${C.green}OK` : `${C.red}MISSING/BAD`}${C.reset}`,
+    `commit-msg: ${hookState.commitMsg ? `${C.green}OK` : `${C.red}MISSING/BAD`}${C.reset}\n` +
+    `checks enabled: ${C.green}${enabledCount}${C.reset}/${allCheckers.length}`,
   );
 }
 
@@ -277,6 +491,8 @@ async function main() {
     s: "status",
     f: "staged",
     c: "check",
+    g: "config",
+    r: "single",
     m: "menu",
     "commit-msg": "commit-msg",
   };

@@ -6,6 +6,8 @@ import { SecurityChecker } from "./checkers/SecurityChecker.js";
 import { TestChecker } from "./checkers/TestChecker.js";
 import { PlaywrightChecker } from "./checkers/PlaywrightChecker.js";
 import { SecretChecker } from "./checkers/SecretChecker.js";
+import { TypecheckChecker } from "./checkers/TypecheckChecker.js";
+import { BuildChecker } from "./checkers/BuildChecker.js";
 
 export function createQualityEngine(options = {}) {
   const engine = new QualityEngine(options);
@@ -15,7 +17,9 @@ export function createQualityEngine(options = {}) {
   engine.registerChecker(new CommitMsgChecker());
   engine.registerChecker(new SecretChecker());
   engine.registerChecker(new SecurityChecker());
+  engine.registerChecker(new TypecheckChecker());
   engine.registerChecker(new TestChecker());
+  engine.registerChecker(new BuildChecker());
   engine.registerChecker(new PlaywrightChecker());
 
   return engine;
