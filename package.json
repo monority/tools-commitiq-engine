@@ -1,6 +1,6 @@
 {
   "name": "commit-quality-check",
-  "version": "1.0.16",
+  "version": "1.0.17",
   "description": "Pre-commit quality checks for staged files and project scripts.",
   "type": "module",
   "main": "scripts/cli.js",
