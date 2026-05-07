@@ -55,11 +55,22 @@ export class BaseChecker {
             return stdout
                 .split("\n")
                 .map((f) => f.trim())
-                .filter(Boolean);
+                .filter(Boolean)
+                .filter((file) => !this.isIgnoredFile(file, context));
         } catch (error) {
             console.error(`❌ Failed to get staged files: ${error.message}`);
             return [];
         }
+    }
+
+    isIgnoredFile(file, context) {
+        const ignorePatterns = context.config?.ignore || [];
+        if (ignorePatterns.length === 0) return false;
+
+        const normalizedFile = normalizePath(file);
+        return ignorePatterns.some((pattern) =>
+            matchesIgnorePattern(normalizedFile, pattern),
+        );
     }
 
     getPackageManagerScriptCommand(packageManager, script, extraArgs = []) {
@@ -119,4 +130,47 @@ export class BaseChecker {
             default: return `npm install --save-dev ${deps}`;
         }
     }
+}
+
+function normalizePath(value) {
+    return String(value || "")
+        .trim()
+        .replace(/\\/g, "/")
+        .replace(/^\.\/+/, "")
+        .replace(/\/+/g, "/");
+}
+
+function matchesIgnorePattern(file, pattern) {
+    const normalizedPattern = normalizePath(pattern);
+    if (!normalizedPattern) return false;
+
+    if (hasGlob(normalizedPattern)) {
+        const target = normalizedPattern.includes("/")
+            ? file
+            : file.split("/").pop();
+        return globToRegExp(normalizedPattern).test(target);
+    }
+
+    const directoryPattern = normalizedPattern.endsWith("/")
+        ? normalizedPattern.slice(0, -1)
+        : normalizedPattern;
+
+    return file === directoryPattern || file.startsWith(`${directoryPattern}/`);
+}
+
+function hasGlob(pattern) {
+    return /[*?]/.test(pattern);
+}
+
+function globToRegExp(pattern) {
+    const escaped = pattern
+        .split("")
+        .map((char) => {
+            if (char === "*") return "[^/]*";
+            if (char === "?") return "[^/]";
+            return char.replace(/[|\\{}()[\]^$+?.]/g, "\\$&");
+        })
+        .join("");
+
+    return new RegExp(`^${escaped}$`);
 }

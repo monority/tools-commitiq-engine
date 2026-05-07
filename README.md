@@ -119,6 +119,7 @@ You can override the auto-detection by adding a `gitQuality` object to your `pac
 {
   "gitQuality": {
     "skip": ["Secret Scanner", "Dependencies Vulnerabilities"],
+    "ignore": ["dist/", "src/generated/", "fixtures/example.js"],
     "staged": {
       "prettier": true,
       "eslint": true
@@ -128,6 +129,7 @@ You can override the auto-detection by adding a `gitQuality` object to your `pac
 ```
 
 - `skip`: An array of checker names to skip (e.g., `"Secret Scanner"`, `"Dependencies Vulnerabilities"`).
+- `ignore`: Repo-relative files or folders to ignore during staged-file checks (e.g., `"dist/"`, `"src/generated/"`, `"fixtures/example.js"`, `"*.snap"`).
 - `staged.prettier`: Enable/disable automatic Prettier fixing on staged files.
 - `staged.eslint`: Enable/disable automatic ESLint fixing on staged files.
 

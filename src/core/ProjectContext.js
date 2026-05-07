@@ -78,6 +78,7 @@ export class ProjectContext {
                 eslint: config.staged?.eslint ?? true,
             },
             skip: config.skip || [],
+            ignore: config.ignore || [],
         };
     }
 }

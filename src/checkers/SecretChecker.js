@@ -28,9 +28,7 @@ export class SecretChecker extends BaseChecker {
     const ignoreComments = ["cqc-disable", "no-scan"];
 
     try {
-      const result = await this.exec(context, ["git", "diff", "--cached", "--name-only"]);
-      const stdout = result.stdout || "";
-      const files = stdout.split("\n").filter(Boolean);
+      const files = await this.getStagedFiles(context);
       const secretsFound = [];
 
       for (const file of files) {
