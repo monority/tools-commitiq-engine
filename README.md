@@ -22,10 +22,12 @@
 - **Smart Dependency Suggestions**: If `eslint` or `prettier` are missing, the tool generates a report with the exact commands needed to install them.
 - **Flexible Commit Validation**: Supports both [Conventional Commits](https://www.conventionalcommits.org/) and [Gitmoji](https://gitmoji.dev/) (emoji-shortcodes like `:art:`) to keep your history clean.
 - **Secret Scanner**: Detects API keys, tokens, passwords before they get committed.
+- **Debug Artifact Scanner**: Catches `console.log` and `debugger` in staged script files.
 - **Dependencies Vulnerabilities**: Runs `npm audit` to check for vulnerabilities.
+- **Package Validation**: Runs `npm pack --dry-run` in full mode to catch packaging issues early.
 - **Fast Performance**: Optimized for staged files to keep your development loop quick.
 - **Quality Reports**: Generates a detailed `quality-report.md` upon failure, explaining exactly what went wrong and how to fix it.
-- **Two Profiles**: `fast` (default) for staged checks + unit tests, `full` adds Playwright e2e.
+- **Two Profiles**: `fast` (default) for staged checks + unit tests, `full` adds build, package validation, and Playwright e2e.
 
 ##  Installation
 
@@ -90,11 +92,13 @@ When running `cqc check`, the tool runs these checkers:
 1. **Linting (ESLint)**: Runs `eslint --fix` on staged JS/TS files.
 2. **Formatting (Prettier)**: Runs `prettier --write` on staged files.
 3. **Secret Scanner**: Scans for API keys, tokens, passwords.
-4. **Type Check**: Runs `typecheck`, `check-types`, or `types` if present.
-5. **Dependencies Vulnerabilities**: Runs `npm audit` to check vulnerabilities.
-6. **Test Suite**: Runs your test script (jest, vitest, etc.).
-7. **Build** (full profile only): Runs `build` or `compile` if present.
-8. **Playwright Tests** (full profile only): Runs e2e tests.
+4. **Debug Artifacts**: Scans staged JS/TS files for `console.log` and `debugger`.
+5. **Type Check**: Runs `typecheck`, `check-types`, or `types` if present.
+6. **Dependencies Vulnerabilities**: Runs `npm audit` to check vulnerabilities.
+7. **Test Suite**: Runs your test script (jest, vitest, etc.).
+8. **Build** (full profile only): Runs `build` or `compile` if present.
+9. **NPM Pack** (full profile only): Runs `npm pack --dry-run`.
+10. **Playwright Tests** (full profile only): Runs e2e tests.
 
 Commit message validation runs in the `commit-msg` hook via `npx cqc commit-msg <file>`.
 
@@ -135,6 +139,14 @@ To ignore secrets in specific lines, add a comment:
 ```js
 // cqc-disable secret
 const mySecret = "sk-123456"; // won't trigger warning
+```
+
+### Ignoring Debug Artifacts
+
+To ignore a `console.log` or `debugger` line intentionally:
+```js
+// cqc-disable debug
+console.log("intentional debug output");
 ```
 
 ##  Quality Reports
