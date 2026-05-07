@@ -3,7 +3,7 @@
 </h1>
 
 <p align="center">
-  <img src="./logo-commit.webp" alt="Commit Quality Check Logo" width="120"/>
+  <img src="./logo-commit.svg" alt="Commit Quality Check Logo" width="120"/>
 </p>
 
 <p align="center">

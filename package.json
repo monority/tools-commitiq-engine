@@ -41,7 +41,6 @@
   },
   "gitQuality": {
     "skip": [
-      "Dependencies Vulnerabilities",
       "Playwright Tests"
     ]
   }
