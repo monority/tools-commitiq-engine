@@ -15,6 +15,7 @@ const PRE_COMMIT_HOOK = "#!/usr/bin/env sh\nnpm exec -- cqc staged\n";
 const COMMIT_MSG_HOOK = "#!/usr/bin/env sh\nnpm exec -- cqc commit-msg \"$1\"\n";
 const PRE_COMMIT_COMMAND = "npm exec -- cqc staged";
 const COMMIT_MSG_COMMAND = "npm exec -- cqc commit-msg \"$1\"";
+const AUTO_PUSH_HOOKS = ["post-commit", "pre-push"];
 
 let selected = 0;
 const options = [
@@ -87,6 +88,42 @@ async function unsetGitHooksPathIfManaged() {
   if (hooksPath === ".husky") {
     await execa("git", ["config", "--unset", "core.hooksPath"], { cwd: projRoot });
   }
+}
+
+async function removeAutoPushHookIfSafe(filePath) {
+  try {
+    const content = await readFile(filePath, "utf8");
+    const commandLines = content
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter((line) => line && !line.startsWith("#"));
+
+    const hasPush = commandLines.some((line) => /\bgit\s+push\b/.test(line));
+    const onlyPushCommands = commandLines.every((line) =>
+      /\bgit\s+push\b/.test(line) || /^(npm exec -- )?cqc\b/.test(line),
+    );
+
+    if (hasPush && onlyPushCommands) {
+      await unlink(filePath);
+      return true;
+    }
+  } catch {
+    // ignore missing hooks
+  }
+
+  return false;
+}
+
+async function removeAutoPushHooks() {
+  const huskyDir = join(projRoot, ".husky");
+  let removed = false;
+
+  for (const hookName of AUTO_PUSH_HOOKS) {
+    const hookPath = join(huskyDir, hookName);
+    removed = await removeAutoPushHookIfSafe(hookPath) || removed;
+  }
+
+  return removed;
 }
 
 async function readProjectPackageFile() {
@@ -451,7 +488,11 @@ async function enableHook() {
   await chmod(preCommitPath, 0o755);
   await chmod(commitMsgPath, 0o755);
   await setGitHooksPath();
+  const removedAutoPush = await removeAutoPushHooks();
   console.log(`${C.green}Hooks enabled${C.reset}`);
+  if (removedAutoPush) {
+    console.log(`${C.yellow}Removed auto-push hook${C.reset}`);
+  }
 }
 
 async function toggleHook() {

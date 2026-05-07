@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, rm, readFile, writeFile } from "node:fs/promises";
+import { access, mkdir, mkdtemp, rm, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -56,6 +56,33 @@ test("disable removes managed hooksPath", async () => {
     });
 
     assert.equal(result.exitCode, 1);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("enable removes legacy auto-push hook", async () => {
+  const root = await mkdtemp(join(tmpdir(), "cqc-cli-auto-push-"));
+
+  try {
+    await execa("git", ["init"], { cwd: root });
+    await writeFile(
+      join(root, "package.json"),
+      JSON.stringify({ name: "tmp", version: "1.0.0" }),
+    );
+    await mkdir(join(root, ".husky"));
+    await writeFile(
+      join(root, ".husky", "post-commit"),
+      "#!/usr/bin/env sh\nnpm exec -- cqc check && git push\n",
+    );
+
+    await execa("node", [cliPath, "enable"], { cwd: root });
+
+    const result = await access(join(root, ".husky", "post-commit"))
+      .then(() => true)
+      .catch(() => false);
+
+    assert.equal(result, false);
   } finally {
     await rm(root, { recursive: true, force: true });
   }
