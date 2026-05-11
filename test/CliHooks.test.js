@@ -10,7 +10,7 @@ const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const cliPath = join(repoRoot, "scripts", "cli.js");
 
 test("enable writes husky hooks and configures git hooksPath", async () => {
-  const root = await mkdtemp(join(tmpdir(), "cqc-cli-hooks-"));
+  const root = await mkdtemp(join(tmpdir(), "cq-cli-hooks-"));
 
   try {
     await execa("git", ["init"], { cwd: root });
@@ -42,7 +42,7 @@ test("enable writes husky hooks and configures git hooksPath", async () => {
 });
 
 test("disable removes managed hooksPath", async () => {
-  const root = await mkdtemp(join(tmpdir(), "cqc-cli-hooks-disable-"));
+  const root = await mkdtemp(join(tmpdir(), "cq-cli-hooks-disable-"));
 
   try {
     await execa("git", ["init"], { cwd: root });
@@ -66,7 +66,7 @@ test("disable removes managed hooksPath", async () => {
 });
 
 test("enable removes legacy auto-push hook", async () => {
-  const root = await mkdtemp(join(tmpdir(), "cqc-cli-auto-push-"));
+  const root = await mkdtemp(join(tmpdir(), "cq-cli-auto-push-"));
 
   try {
     await execa("git", ["init"], { cwd: root });
@@ -93,7 +93,7 @@ test("enable removes legacy auto-push hook", async () => {
 });
 
 test("enable removes husky-style auto-push hook", async () => {
-  const root = await mkdtemp(join(tmpdir(), "cqc-cli-husky-auto-push-"));
+  const root = await mkdtemp(join(tmpdir(), "cq-cli-husky-auto-push-"));
 
   try {
     await execa("git", ["init"], { cwd: root });
@@ -125,7 +125,7 @@ test("enable removes husky-style auto-push hook", async () => {
 });
 
 test("auto-push command toggles post-commit hook and config", async () => {
-  const root = await mkdtemp(join(tmpdir(), "cqc-cli-auto-push-toggle-"));
+  const root = await mkdtemp(join(tmpdir(), "cq-cli-auto-push-toggle-"));
 
   try {
     await execa("git", ["init"], { cwd: root });
@@ -157,7 +157,7 @@ test("auto-push command toggles post-commit hook and config", async () => {
 });
 
 test("direct status command exits without pause prompt", async () => {
-  const root = await mkdtemp(join(tmpdir(), "cqc-cli-status-"));
+  const root = await mkdtemp(join(tmpdir(), "cq-cli-status-"));
 
   try {
     await execa("git", ["init"], { cwd: root });
@@ -180,12 +180,12 @@ test("direct status command exits without pause prompt", async () => {
 });
 
 test("status shows staged analysis summary when files are staged", async () => {
-  const root = await mkdtemp(join(tmpdir(), "cqc-cli-status-analysis-"));
+  const root = await mkdtemp(join(tmpdir(), "cq-cli-status-analysis-"));
 
   try {
     await execa("git", ["init"], { cwd: root });
-    await execa("git", ["config", "user.email", "cqc@example.com"], { cwd: root });
-    await execa("git", ["config", "user.name", "CQC"], { cwd: root });
+    await execa("git", ["config", "user.email", "cq@example.com"], { cwd: root });
+    await execa("git", ["config", "user.name", "CQ"], { cwd: root });
     await mkdir(join(root, "src"));
     await writeFile(
       join(root, "package.json"),
@@ -211,7 +211,7 @@ test("status shows staged analysis summary when files are staged", async () => {
 });
 
 test("status accepts husky underscore hooksPath as managed", async () => {
-  const root = await mkdtemp(join(tmpdir(), "cqc-cli-status-husky-underscore-"));
+  const root = await mkdtemp(join(tmpdir(), "cq-cli-status-husky-underscore-"));
 
   try {
     await execa("git", ["init"], { cwd: root });
@@ -238,12 +238,12 @@ test("status accepts husky underscore hooksPath as managed", async () => {
 });
 
 test("suggest prints suggested commit for staged files", async () => {
-  const root = await mkdtemp(join(tmpdir(), "cqc-cli-suggest-"));
+  const root = await mkdtemp(join(tmpdir(), "cq-cli-suggest-"));
 
   try {
     await execa("git", ["init"], { cwd: root });
-    await execa("git", ["config", "user.email", "cqc@example.com"], { cwd: root });
-    await execa("git", ["config", "user.name", "CQC"], { cwd: root });
+    await execa("git", ["config", "user.email", "cq@example.com"], { cwd: root });
+    await execa("git", ["config", "user.name", "CQ"], { cwd: root });
     await mkdir(join(root, "src"));
     await writeFile(
       join(root, "package.json"),
@@ -269,12 +269,12 @@ test("suggest prints suggested commit for staged files", async () => {
 });
 
 test("commit creates git commit from suggested header", async () => {
-  const root = await mkdtemp(join(tmpdir(), "cqc-cli-commit-"));
+  const root = await mkdtemp(join(tmpdir(), "cq-cli-commit-"));
 
   try {
     await execa("git", ["init"], { cwd: root });
-    await execa("git", ["config", "user.email", "cqc@example.com"], { cwd: root });
-    await execa("git", ["config", "user.name", "CQC"], { cwd: root });
+    await execa("git", ["config", "user.email", "cq@example.com"], { cwd: root });
+    await execa("git", ["config", "user.name", "CQ"], { cwd: root });
     await mkdir(join(root, "src"));
     await writeFile(
       join(root, "package.json"),
@@ -301,12 +301,12 @@ test("commit creates git commit from suggested header", async () => {
 });
 
 test("commit accepts explicit message override", async () => {
-  const root = await mkdtemp(join(tmpdir(), "cqc-cli-commit-override-"));
+  const root = await mkdtemp(join(tmpdir(), "cq-cli-commit-override-"));
 
   try {
     await execa("git", ["init"], { cwd: root });
-    await execa("git", ["config", "user.email", "cqc@example.com"], { cwd: root });
-    await execa("git", ["config", "user.name", "CQC"], { cwd: root });
+    await execa("git", ["config", "user.email", "cq@example.com"], { cwd: root });
+    await execa("git", ["config", "user.name", "CQ"], { cwd: root });
     await mkdir(join(root, "src"));
     await writeFile(
       join(root, "package.json"),
@@ -333,12 +333,12 @@ test("commit accepts explicit message override", async () => {
 });
 
 test("commit fails when no staged files exist", async () => {
-  const root = await mkdtemp(join(tmpdir(), "cqc-cli-commit-empty-"));
+  const root = await mkdtemp(join(tmpdir(), "cq-cli-commit-empty-"));
 
   try {
     await execa("git", ["init"], { cwd: root });
-    await execa("git", ["config", "user.email", "cqc@example.com"], { cwd: root });
-    await execa("git", ["config", "user.name", "CQC"], { cwd: root });
+    await execa("git", ["config", "user.email", "cq@example.com"], { cwd: root });
+    await execa("git", ["config", "user.name", "CQ"], { cwd: root });
     await writeFile(
       join(root, "package.json"),
       JSON.stringify({ name: "tmp", version: "1.0.0" }),
@@ -357,12 +357,12 @@ test("commit fails when no staged files exist", async () => {
 });
 
 test("json prints staged analysis payload", async () => {
-  const root = await mkdtemp(join(tmpdir(), "cqc-cli-json-"));
+  const root = await mkdtemp(join(tmpdir(), "cq-cli-json-"));
 
   try {
     await execa("git", ["init"], { cwd: root });
-    await execa("git", ["config", "user.email", "cqc@example.com"], { cwd: root });
-    await execa("git", ["config", "user.name", "CQC"], { cwd: root });
+    await execa("git", ["config", "user.email", "cq@example.com"], { cwd: root });
+    await execa("git", ["config", "user.name", "CQ"], { cwd: root });
     await mkdir(join(root, "src"));
     await writeFile(
       join(root, "package.json"),
@@ -390,7 +390,7 @@ test("json prints staged analysis payload", async () => {
 });
 
 test("json prints empty payload when nothing is staged", async () => {
-  const root = await mkdtemp(join(tmpdir(), "cqc-cli-json-empty-"));
+  const root = await mkdtemp(join(tmpdir(), "cq-cli-json-empty-"));
 
   try {
     await execa("git", ["init"], { cwd: root });
@@ -418,12 +418,12 @@ test("json prints empty payload when nothing is staged", async () => {
 });
 
 test("json-check prints checker results payload and succeeds when checks pass", async () => {
-  const root = await mkdtemp(join(tmpdir(), "cqc-cli-json-check-"));
+  const root = await mkdtemp(join(tmpdir(), "cq-cli-json-check-"));
 
   try {
     await execa("git", ["init"], { cwd: root });
-    await execa("git", ["config", "user.email", "cqc@example.com"], { cwd: root });
-    await execa("git", ["config", "user.name", "CQC"], { cwd: root });
+    await execa("git", ["config", "user.email", "cq@example.com"], { cwd: root });
+    await execa("git", ["config", "user.name", "CQ"], { cwd: root });
     await mkdir(join(root, "src"));
     await writeFile(
       join(root, "package.json"),
@@ -463,12 +463,12 @@ test("json-check prints checker results payload and succeeds when checks pass", 
 });
 
 test("json-check returns non-zero and JSON payload when checks fail", async () => {
-  const root = await mkdtemp(join(tmpdir(), "cqc-cli-json-check-fail-"));
+  const root = await mkdtemp(join(tmpdir(), "cq-cli-json-check-fail-"));
 
   try {
     await execa("git", ["init"], { cwd: root });
-    await execa("git", ["config", "user.email", "cqc@example.com"], { cwd: root });
-    await execa("git", ["config", "user.name", "CQC"], { cwd: root });
+    await execa("git", ["config", "user.email", "cq@example.com"], { cwd: root });
+    await execa("git", ["config", "user.name", "CQ"], { cwd: root });
     await writeFile(
       join(root, "package.json"),
       JSON.stringify({ name: "tmp", version: "1.0.0" }),
@@ -496,12 +496,12 @@ test("json-check returns non-zero and JSON payload when checks fail", async () =
 });
 
 test("json-check supports full profile flag", async () => {
-  const root = await mkdtemp(join(tmpdir(), "cqc-cli-json-check-full-"));
+  const root = await mkdtemp(join(tmpdir(), "cq-cli-json-check-full-"));
 
   try {
     await execa("git", ["init"], { cwd: root });
-    await execa("git", ["config", "user.email", "cqc@example.com"], { cwd: root });
-    await execa("git", ["config", "user.name", "CQC"], { cwd: root });
+    await execa("git", ["config", "user.email", "cq@example.com"], { cwd: root });
+    await execa("git", ["config", "user.name", "CQ"], { cwd: root });
     await mkdir(join(root, "src"));
     await writeFile(
       join(root, "package.json"),

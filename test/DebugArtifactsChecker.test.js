@@ -7,12 +7,12 @@ import { execa } from "execa";
 import { DebugArtifactsChecker } from "../src/checkers/DebugArtifactsChecker.js";
 
 test("passes when no script files are staged", async () => {
-  const root = await mkdtemp(join(tmpdir(), "cqc-debug-clean-"));
+  const root = await mkdtemp(join(tmpdir(), "cq-debug-clean-"));
   const checker = new DebugArtifactsChecker();
   try {
     await execa("git", ["init"], { cwd: root });
-    await execa("git", ["config", "user.email", "cqc@example.com"], { cwd: root });
-    await execa("git", ["config", "user.name", "CQC"], { cwd: root });
+    await execa("git", ["config", "user.email", "cq@example.com"], { cwd: root });
+    await execa("git", ["config", "user.name", "CQ"], { cwd: root });
     await writeFile(join(root, "package.json"), JSON.stringify({ name: "tmp", version: "1.0.0" }));
     await execa("git", ["add", "package.json"], { cwd: root });
 
@@ -29,13 +29,13 @@ test("passes when no script files are staged", async () => {
 });
 
 test("fails when staged file contains console.log", async () => {
-  const root = await mkdtemp(join(tmpdir(), "cqc-debug-check-"));
+  const root = await mkdtemp(join(tmpdir(), "cq-debug-check-"));
   const checker = new DebugArtifactsChecker();
 
   try {
     await execa("git", ["init"], { cwd: root });
-    await execa("git", ["config", "user.email", "cqc@example.com"], { cwd: root });
-    await execa("git", ["config", "user.name", "CQC"], { cwd: root });
+    await execa("git", ["config", "user.email", "cq@example.com"], { cwd: root });
+    await execa("git", ["config", "user.name", "CQ"], { cwd: root });
     await writeFile(join(root, "package.json"), JSON.stringify({ name: "tmp", version: "1.0.0" }));
     await mkdir(join(root, "src"));
     await writeFile(join(root, "src", "index.js"), "console.log('debug');\n");
@@ -55,13 +55,13 @@ test("fails when staged file contains console.log", async () => {
 });
 
 test("ignores configured staged file", async () => {
-  const root = await mkdtemp(join(tmpdir(), "cqc-debug-ignore-file-"));
+  const root = await mkdtemp(join(tmpdir(), "cq-debug-ignore-file-"));
   const checker = new DebugArtifactsChecker();
 
   try {
     await execa("git", ["init"], { cwd: root });
-    await execa("git", ["config", "user.email", "cqc@example.com"], { cwd: root });
-    await execa("git", ["config", "user.name", "CQC"], { cwd: root });
+    await execa("git", ["config", "user.email", "cq@example.com"], { cwd: root });
+    await execa("git", ["config", "user.name", "CQ"], { cwd: root });
     await writeFile(join(root, "package.json"), JSON.stringify({ name: "tmp", version: "1.0.0" }));
     await mkdir(join(root, "src"));
     await writeFile(join(root, "src", "ignored.js"), "console.log('debug');\n");
@@ -83,13 +83,13 @@ test("ignores configured staged file", async () => {
 });
 
 test("ignores configured staged directory", async () => {
-  const root = await mkdtemp(join(tmpdir(), "cqc-debug-ignore-dir-"));
+  const root = await mkdtemp(join(tmpdir(), "cq-debug-ignore-dir-"));
   const checker = new DebugArtifactsChecker();
 
   try {
     await execa("git", ["init"], { cwd: root });
-    await execa("git", ["config", "user.email", "cqc@example.com"], { cwd: root });
-    await execa("git", ["config", "user.name", "CQC"], { cwd: root });
+    await execa("git", ["config", "user.email", "cq@example.com"], { cwd: root });
+    await execa("git", ["config", "user.name", "CQ"], { cwd: root });
     await writeFile(join(root, "package.json"), JSON.stringify({ name: "tmp", version: "1.0.0" }));
     await mkdir(join(root, "generated"));
     await writeFile(join(root, "generated", "index.js"), "console.log('debug');\n");

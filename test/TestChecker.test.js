@@ -17,7 +17,7 @@ test("reports success when no test script exists", async () => {
 });
 
 test("runs the first available test script", async () => {
-  const root = await mkdtemp(join(tmpdir(), "cqc-test-checker-"));
+  const root = await mkdtemp(join(tmpdir(), "cq-test-checker-"));
   const checker = new TestChecker();
 
   try {

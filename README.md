@@ -104,7 +104,7 @@ CQ expects all of these to be true:
 - `git config core.hooksPath` points to `.husky`
 
 Common causes:
-- hooks were created by an older CQ/CQC version
+- hooks were created by an older hook setup version
 - `.husky/pre-commit` or `.husky/commit-msg` was edited manually
 - Husky exists, but Git still points to another hooks directory
 - only one of the two CQ hooks exists

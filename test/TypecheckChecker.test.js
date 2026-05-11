@@ -17,7 +17,7 @@ test("reports success when no typecheck script exists", async () => {
 });
 
 test("runs available typecheck script", async () => {
-  const root = await mkdtemp(join(tmpdir(), "cqc-typecheck-"));
+  const root = await mkdtemp(join(tmpdir(), "cq-typecheck-"));
   const checker = new TypecheckChecker();
 
   try {

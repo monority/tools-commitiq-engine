@@ -31,7 +31,7 @@ test("build writes runnable dist package manifest without self dependency", asyn
 });
 
 test("built dist cli runs direct status command without pause prompt", async () => {
-    const root = await mkdtemp(join(tmpdir(), "cqc-dist-cli-"));
+    const root = await mkdtemp(join(tmpdir(), "cq-dist-cli-"));
 
     try {
         await buildDist();
