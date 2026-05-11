@@ -1,2 +1,2 @@
 #!/usr/bin/env sh
-npm exec -- cqc commit-msg "$1"
+npm exec -- cq commit-msg "$1"

@@ -1,11 +1,12 @@
 {
-  "name": "commit-quality-check",
-  "version": "1.0.21",
-  "description": "Pre-commit quality checks for staged files and project scripts.",
+  "name": "commitiq-engine",
+  "version": "3.0.0",
+  "description": "CommitIQ Engine: diff-aware commit quality intelligence for staged changes and release-safe Git workflows.",
   "type": "module",
   "main": "scripts/cli.js",
   "bin": {
-    "commit-quality-check": "scripts/cli.js",
+    "commitiq-engine": "scripts/cli.js",
+    "cq": "scripts/cli.js",
     "cqc": "scripts/cli.js"
   },
   "exports": {
@@ -14,9 +15,11 @@
   "files": [
     "scripts",
     "src",
+    "cq",
     "cqc"
   ],
   "scripts": {
+    "build": "node build.mjs",
     "test": "node --test ./test/*.test.js",
     "prepare": "husky"
   },
@@ -29,12 +32,23 @@
     "husky",
     "eslint",
     "prettier",
-    "quality"
+    "quality",
+    "commit",
+    "diff-aware",
+    "release",
+    "guard"
   ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/monority/commitiq-engine.git"
+  },
+  "homepage": "https://github.com/monority/commitiq-engine#readme",
+  "bugs": {
+    "url": "https://github.com/monority/commitiq-engine/issues"
+  },
   "author": "Ronan Chenu <ronan.chenu@example.com>",
   "license": "MIT",
   "dependencies": {
-    "commit-quality-check": "^1.0.7",
     "execa": "^9.5.2",
     "husky": "^9.1.6"
   },

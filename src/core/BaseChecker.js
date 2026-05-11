@@ -45,6 +45,10 @@ export class BaseChecker {
     }
 
     async getStagedFiles(context) {
+        if (Array.isArray(context?.stagedFiles)) {
+            return context.stagedFiles.filter((file) => !this.isIgnoredFile(file, context));
+        }
+
         const { root } = context;
         try {
             const { stdout } = await execa(

@@ -25,7 +25,7 @@ export class DebugArtifactsChecker extends BaseChecker {
 
       const lines = result.stdout.split("\n");
       lines.forEach((line, index) => {
-        if (line.includes("cqc-disable debug")) return;
+        if (line.includes("cq-disable debug") || line.includes("cqc-disable debug")) return;
         if (debuggerPattern.test(line)) {
           findings.push(`${file}:${index + 1} debugger`);
         } else if (consoleLogPattern.test(line)) {

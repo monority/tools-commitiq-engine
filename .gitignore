@@ -7,3 +7,5 @@ output/
 .tmp-*
 test-project/
 quality-report.md
+upgrade-plan.md
+summary.md

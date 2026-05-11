@@ -1,2 +1,2 @@
 #!/usr/bin/env sh
-npm exec -- cqc staged
+npm exec -- cq staged

@@ -2,18 +2,18 @@ import json
 from pathlib import Path
 import textwrap
 
-base = Path('output/commit-quality-check-package')
+base = Path('output/commitiq-engine-package')
 (base / 'scripts').mkdir(parents=True, exist_ok=True)
 
 files = {
 'package.json': {
-  'name': 'commit-quality-check',
-  'version': '1.0.4',
-  'description': 'Pre-commit quality checks for staged files and project scripts.',
+  'name': 'commitiq-engine',
+  'version': '3.0.0',
+  'description': 'CommitIQ Engine: diff-aware commit quality intelligence for staged changes and release-safe Git workflows.',
   'type': 'module',
   'bin': {
-    'commit-quality-check': 'scripts/cli.js',
-    'cqc': 'scripts/cli.js'
+    'commitiq-engine': 'scripts/cli.js',
+    'cq': 'scripts/cli.js'
   },
   'files': ['scripts'],
   'scripts': {
@@ -106,11 +106,11 @@ files = {
       await writeFile(hookPath, hookBody, 'utf8');
     }
 
-    console.log('commit-quality-check is ready. The hook will run on every commit.');
+    console.log('commitiq-engine is ready. The hook will run on every commit.');
   }
 
   function createHookFile(packageManager) {
-    const { command: pmCommand, args } = getPackageManagerExecCommand(packageManager, ['cqc', 'c']);
+    const { command: pmCommand, args } = getPackageManagerExecCommand(packageManager, ['cq', 'c']);
     const commandLine = [pmCommand, ...args].join(' ');
 
     return `#!/usr/bin/env sh
@@ -132,12 +132,12 @@ files = {
   }
 
   function printHelp() {
-    console.log(`commit-quality-check
+    console.log(`commitiq-engine
 
   Commands:
-    cqc i | init     Install the Husky pre-commit hook
-    cqc s | staged   Run fixes only on staged files
-    cqc c | check    Run staged fixes, then configured project scripts
+    cq i | init      Install the Husky pre-commit hook
+    cq s | staged    Run fixes only on staged files
+    cq c | check     Run staged fixes, then configured project scripts
   `);
   }
 '''),
@@ -559,9 +559,9 @@ files = {
   }
 '''),
 '.npmignore': 'node_modules\noutput\n',
-'README.md': '# commit-quality-check\n\nPre-commit quality checks for staged files and project scripts.\n\n## Install\n```\npnpm add -D commit-quality-check\npnpm cqc init\n```\n\n## Usage\n```\npnpm cqc staged    # Run fixes only on staged files\npnpm cqc check     # Run staged fixes, then configured project scripts\npnpm cqc init      # Install the Husky pre-commit hook\n```',
-'.husky/pre-commit': 'pnpm cqc check\n',
-'scripts/prepare.js': textwrap.dedent('''\n  import { execa } from 'execa';\n  import { mkdir, writeFile } from 'node:fs/promises';\n  import { join } from 'node:path';\n\n  async function main() {\n    console.log('Setting up commit-quality-check...');\n    \n    try {\n      await execa('husky', ['init'], { stdio: 'inherit' });\n      \n      const hookPath = join(process.cwd(), '.husky', 'pre-commit');\n      const hookBody = `#!/usr/bin/env sh\n\npnpm cqc check\n`;\n      \n      await mkdir(join(process.cwd(), '.husky'), { recursive: true });\n      await writeFile(hookPath, hookBody, 'utf8');\n      \n      console.log('✅ Husky hook installed successfully!');\n    } catch (error) {\n      console.error('Failed to install Husky hook:', error.message);\n      process.exit(1);\n    }\n  }\n\n  main().catch((error) => {\n    console.error('Error:', error);\n    process.exit(1);\n  });\n''')
+'README.md': '# CommitIQ Engine\n\nCommitIQ Engine: diff-aware commit quality intelligence for staged changes and release-safe Git workflows.\n\n## Install\n```\npnpm add -D commitiq-engine\npnpm cq init\n```\n\n## Usage\n```\npnpm cq staged    # Run fixes only on staged files\npnpm cq check     # Run staged fixes, then configured project scripts\npnpm cq init      # Install the Husky pre-commit hook\n```',
+'.husky/pre-commit': 'pnpm cq check\n',
+'scripts/prepare.js': textwrap.dedent('''\n  import { execa } from 'execa';\n  import { mkdir, writeFile } from 'node:fs/promises';\n  import { join } from 'node:path';\n\n  async function main() {\n    console.log('Setting up commitiq-engine...');\n    \n    try {\n      await execa('husky', ['init'], { stdio: 'inherit' });\n      \n      const hookPath = join(process.cwd(), '.husky', 'pre-commit');\n      const hookBody = `#!/usr/bin/env sh\n\npnpm cq check\n`;\n      \n      await mkdir(join(process.cwd(), '.husky'), { recursive: true });\n      await writeFile(hookPath, hookBody, 'utf8');\n      \n      console.log('✅ Husky hook installed successfully!');\n    } catch (error) {\n      console.error('Failed to install Husky hook:', error.message);\n      process.exit(1);\n    }\n  }\n\n  main().catch((error) => {\n    console.error('Error:', error);\n    process.exit(1);\n  });\n''')
 }
 
 for rel, content in files.items():
@@ -588,11 +588,11 @@ manifest = {
     'path': str(base),
     'files': sorted([str(p.relative_to(base)) for p in base.rglob('*') if p.is_file()]),
     'install_commands': [
-        'cd output/commit-quality-check-package',
+        'cd output/commitiq-engine-package',
         'npm install',
         'npm run prepare',
         'npm pack --dry-run'
     ]
 }
-(Path('output') / 'commit-quality-check-package-manifest.json').write_text(json.dumps(manifest, indent=2) + '\n', encoding='utf-8')
+(Path('output') / 'commitiq-engine-package-manifest.json').write_text(json.dumps(manifest, indent=2) + '\n', encoding='utf-8')
 print(json.dumps(manifest, indent=2))

@@ -1,20 +1,20 @@
 <h1 align="center">
-  Commit Quality Check
+  CommitIQ Engine
 </h1>
 
 <p align="center">
-  <img src="./logo-commit.svg" alt="Commit Quality Check Logo" width="120"/>
+  <img src="./logo-commit.svg" alt="CommitIQ Engine Logo" width="120"/>
 </p>
 
 <p align="center">
-  <strong>A powerful, zero-config CLI to ensure your commits meet quality standards before they hit the repository.</strong>
+  <strong>A premium, diff-aware CLI that polishes each commit before it reaches your repository.</strong>
 </p>
 
 ---
 
 ##  Overview
 
-`commit-quality-check` (cqc) is a lightweight tool designed to be integrated into your Git workflow (ideally via Husky) to prevent "dirty" commits. It automates linting, formatting, and custom quality checks, ensuring that only high-quality code is committed.
+`commitiq-engine` (`cq`) is a diff-aware Git workflow assistant built to prevent rough, risky, or under-tested commits. It automates linting, formatting, quality checks, commit suggestions, and CI-friendly analysis so each staged change lands cleaner.
 
 ##  Features
 
@@ -25,6 +25,7 @@
 - **Debug Artifact Scanner**: Catches `console.log` and `debugger` in staged script files.
 - **Dependencies Vulnerabilities**: Runs `npm audit` to check for vulnerabilities.
 - **Package Validation**: Runs `npm pack --dry-run` in full mode to catch packaging issues early.
+- **Diff-aware Risk Signals**: Detects removed tests from staged diff content, not only file names.
 - **Fast Performance**: Optimized for staged files to keep your development loop quick.
 - **Quality Reports**: Generates a detailed `quality-report.md` upon failure, explaining exactly what went wrong and how to fix it.
 - **Two Profiles**: `fast` (default) for staged checks + unit tests, `full` adds build, package validation, and Playwright e2e.
@@ -35,28 +36,30 @@
 Install the tool and enable the hook:
 
 ```bash
-npm install --save-dev commit-quality-check husky
-npx cqc enable
+npm install --save-dev commitiq-engine husky
+npx cq enable
 ```
 
 Or with pnpm:
 ```bash
-pnpm add -D commit-quality-check husky
-pnpm exec cqc enable
+pnpm add -D commitiq-engine husky
+pnpm exec cq enable
 ```
 
 ## 🛠 Usage & Commands
 
-Run `npx cqc` to show interactive menu (arrow keys + enter):
+Run `npx cq` to show interactive menu (arrow keys + enter):
 
 ```
-━━━ COMMIT QUALITY CHECK ━━━
+━━━ COMMITIQ ENGINE ━━━
 
   ▶ Toggle hook ON
     Toggle auto-push OFF
     Configure checks
     Run single check
     Status
+    Suggest commit
+    Commit
     Staged check
     Full check
     Quit
@@ -68,17 +71,21 @@ Or use direct commands:
 
 | Command | Alias | Description |
 | :--- | :--- | :--- |
-| `npx cqc` | - | Interactive menu |
-| `npx cqc toggle` | `t` | Toggle pre-commit and commit-msg hooks |
-| `npx cqc auto-push` | `p` | Toggle optional post-commit auto-push |
-| `npx cqc config` | `g` | Open the checker toggle menu |
-| `npx cqc single` | `r` | Pick and run one checker |
-| `npx cqc enable` | `e` | Enable auto-check |
-| `npx cqc disable` | `d` | Disable auto-check |
-| `npx cqc status` | `s` | Show status |
-| `npx cqc staged` | `f` | Fast check (staged) |
-| `npx cqc check` | `c` | Full check + e2e |
-| `npx cqc commit-msg <file>` | - | Validate commit message hook file |
+| `npx cq` | - | Interactive menu |
+| `npx cq toggle` | `t` | Toggle pre-commit and commit-msg hooks |
+| `npx cq auto-push` | `p` | Toggle optional post-commit auto-push |
+| `npx cq config` | `g` | Open the checker toggle menu |
+| `npx cq single` | `r` | Pick and run one checker |
+| `npx cq enable` | `e` | Enable auto-check |
+| `npx cq disable` | `d` | Disable auto-check |
+| `npx cq status` | `s` | Show status |
+| `npx cq suggest` | `u` | Show suggested commit header from staged changes |
+| `npx cq json` | `j` | Print staged analysis, score, and suggestion as JSON |
+| `npx cq json-check [--full]` | - | Run fast or full checks and print JSON payload with checker results, duration, and optional report path for CI |
+| `npx cq commit` | - | Create git commit from suggested header; in TTY you can accept or edit message |
+| `npx cq staged` | `f` | Fast check (staged) |
+| `npx cq check` | `c` | Full check + e2e |
+| `npx cq commit-msg <file>` | - | Validate commit message hook file |
 
 ### Using as Git Hook
 
@@ -89,40 +96,40 @@ git commit --no-verify -m "feat: ..."
 
 ### Why Hook Status Can Be BROKEN
 
-`npx cqc status` shows `BROKEN` when CQC finds hook files, but the Git hook setup is incomplete or not managed by CQC.
+`npx cq status` shows `BROKEN` when CQ finds hook files, but the Git hook setup is incomplete or not managed by CQ.
 
-CQC expects all of these to be true:
-- `.husky/pre-commit` contains `npm exec -- cqc staged`
-- `.husky/commit-msg` contains `npm exec -- cqc commit-msg "$1"`
+CQ expects all of these to be true:
+- `.husky/pre-commit` contains `npm exec -- cq staged`
+- `.husky/commit-msg` contains `npm exec -- cq commit-msg "$1"`
 - `git config core.hooksPath` points to `.husky`
 
 Common causes:
-- hooks were created by an older CQC version
+- hooks were created by an older CQ/CQC version
 - `.husky/pre-commit` or `.husky/commit-msg` was edited manually
 - Husky exists, but Git still points to another hooks directory
-- only one of the two CQC hooks exists
+- only one of the two CQ hooks exists
 - another tool owns the same hook file
 
 Check the setup:
 
 ```bash
-npx cqc status
+npx cq status
 git config --get core.hooksPath
 cat .husky/pre-commit
 cat .husky/commit-msg
 ```
 
-Repair the CQC hooks:
+Repair the CQ hooks:
 
 ```bash
-npx cqc enable
+npx cq enable
 ```
 
-If you intentionally use custom hooks, keep the CQC commands inside them instead of replacing them.
+If you intentionally use custom hooks, keep the CQ commands inside them instead of replacing them.
 
 ##  How It Works
 
-When running `cqc check`, the tool runs these checkers:
+When running `cq check`, the tool runs these checkers:
 
 1. **Linting (ESLint)**: Runs `eslint --fix` on staged JS/TS files.
 2. **Formatting (Prettier)**: Runs `prettier --write` on staged files.
@@ -135,10 +142,10 @@ When running `cqc check`, the tool runs these checkers:
 9. **NPM Pack** (full profile only): Runs `npm pack --dry-run`.
 10. **Playwright Tests** (full profile only): Runs e2e tests.
 
-Commit message validation runs in the `commit-msg` hook via `npx cqc commit-msg <file>`.
+Commit message validation runs in the `commit-msg` hook via `npx cq commit-msg <file>`.
 
 ### Auto-detected Scripts
-If no custom configuration is provided, `cqc` looks for these scripts in your `package.json` (in order):
+If no custom configuration is provided, `cq` looks for these scripts in your `package.json` (in order):
 - `lint`
 - `typecheck` | `check-types` | `types`
 - `test:unit` | `unit`
@@ -156,6 +163,9 @@ You can override the auto-detection by adding a `gitQuality` object to your `pac
     "skip": ["Secret Scanner", "Dependencies Vulnerabilities"],
     "ignore": ["dist/", "src/generated/", "fixtures/example.js"],
     "autoPush": false,
+    "risk": {
+      "failOn": "HIGH"
+    },
     "staged": {
       "prettier": true,
       "eslint": true
@@ -167,8 +177,11 @@ You can override the auto-detection by adding a `gitQuality` object to your `pac
 - `skip`: An array of checker names to skip (e.g., `"Secret Scanner"`, `"Dependencies Vulnerabilities"`).
 - `ignore`: Repo-relative files or folders to ignore during staged-file checks (e.g., `"dist/"`, `"src/generated/"`, `"fixtures/example.js"`, `"*.snap"`).
 - `autoPush`: When `true`, creates an optional `post-commit` hook that runs full checks and `git push` after a successful commit. Defaults to `false`.
+- `risk.failOn`: Optional risk gate threshold. Use `"LOW"`, `"MEDIUM"`, or `"HIGH"` to fail when computed commit risk reaches that level. Default is advisory-only.
 - `staged.prettier`: Enable/disable automatic Prettier fixing on staged files.
 - `staged.eslint`: Enable/disable automatic ESLint fixing on staged files.
+
+Risk analysis is now diff-aware for test removals. Deleting test files or removing `describe` / `it` / `test` / `expect` lines from staged hunks raises commit risk even when staged file names alone would not show it.
 
 The interactive menu can also toggle each checker on or off and save the result back into `gitQuality.skip`.
 
@@ -176,7 +189,7 @@ The interactive menu can also toggle each checker on or off and save the result 
 
 To ignore secrets in specific lines, add a comment:
 ```js
-// cqc-disable secret
+// cq-disable secret
 const mySecret = "sk-123456"; // won't trigger warning
 ```
 
@@ -184,7 +197,7 @@ const mySecret = "sk-123456"; // won't trigger warning
 
 To ignore a `console.log` or `debugger` line intentionally:
 ```js
-// cqc-disable debug
+// cq-disable debug
 console.log("intentional debug output");
 ```
 
@@ -192,6 +205,7 @@ console.log("intentional debug output");
 
 When a check fails or a dependency is missing, a `quality-report.md` is generated in the project root. This report includes:
 - **Results Table**: A summary of which checks passed, failed, or were skipped.
+- **Diff Analysis**: Staged file counts, line stats, changed areas, and removed-test signals.
 - **How to Fix**: Step-by-step instructions for fixing failed quality checks.
 - **Setup Suggestions**: Direct installation commands if recommended tools (like ESLint) are not found.
 
@@ -199,4 +213,4 @@ When a check fails or a dependency is missing, a `quality-report.md` is generate
 
 ## Repository
 
-[https://github.com/monority/tools-commit-quality-check](https://github.com/monority/tools-commit-quality-check)
+[https://github.com/monority/commitiq-engine](https://github.com/monority/commitiq-engine)

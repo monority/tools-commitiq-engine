@@ -6,6 +6,7 @@ import { BaseChecker } from "./BaseChecker.js";
 export class CheckRegistry {
     constructor() {
         this.checkers = new Map();
+        this.plugins = new Map();
     }
 
     /**
@@ -15,6 +16,32 @@ export class CheckRegistry {
     register(checker) {
         this.checkers.set(checker.name, checker);
         return this;
+    }
+
+    registerMany(checkers = []) {
+        for (const checker of checkers) {
+            this.register(checker);
+        }
+
+        return this;
+    }
+
+    registerPlugin(plugin) {
+        if (!plugin || typeof plugin !== "object") {
+            throw new TypeError("Plugin must be an object.");
+        }
+
+        const checkers = typeof plugin.checkers === "function"
+            ? plugin.checkers()
+            : (plugin.checkers || []);
+
+        if (!Array.isArray(checkers)) {
+            throw new TypeError("Plugin checkers must be an array or function returning an array.");
+        }
+
+        const pluginName = plugin.name || `plugin-${this.plugins.size + 1}`;
+        this.plugins.set(pluginName, plugin);
+        return this.registerMany(checkers);
     }
 
     /**
@@ -75,5 +102,9 @@ export class CheckRegistry {
 
     get allCheckers() {
         return Array.from(this.checkers.values());
+    }
+
+    get allPlugins() {
+        return Array.from(this.plugins.values());
     }
 }

@@ -25,7 +25,7 @@ export class SecretChecker extends BaseChecker {
 
     const skipExt = [".png", ".jpg", ".jpeg", ".gif", ".ico", ".svg", ".woff", ".woff2", ".ttf", ".eot", ".mp3", ".mp4", ".zip", ".gz"];
     const ignoreFiles = ["README.md", "CHANGELOG.md"];
-    const ignoreComments = ["cqc-disable", "no-scan"];
+    const ignoreComments = ["cq-disable", "cqc-disable", "no-scan"];
 
     try {
       const files = await this.getStagedFiles(context);
@@ -65,7 +65,7 @@ export class SecretChecker extends BaseChecker {
           success: false,
           message: `Secrets detected: ${msg}`,
           suggestedFix: "Remove secrets from staged files",
-          details: `Remove secrets or add \`// cqc-disable secret\` to ignore.\n\nFiles:\n- ${uniqueFiles}`,
+          details: `Remove secrets or add \`// cq-disable secret\` to ignore.\n\nFiles:\n- ${uniqueFiles}`,
         };
       }
 

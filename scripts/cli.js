@@ -5,17 +5,18 @@ import { join } from "node:path";
 import readline from "node:readline";
 import { execa } from "execa";
 import { CommitMsgChecker } from "../src/checkers/CommitMsgChecker.js";
+import { ProjectContext } from "../src/core/ProjectContext.js";
 import { createQualityEngine } from "../src/index.js";
-import { getProjectRoot } from "../src/utils/ProjectUtils.js";
-import { runCheck } from "./quality-staged.js";
+import { detectPackageManager, getProjectRoot } from "../src/utils/ProjectUtils.js";
+import { formatSuggestionSummary, runCheck } from "./quality-staged.js";
 
 const projRoot = await getProjectRoot();
 const packageJsonPath = join(projRoot, "package.json");
-const PRE_COMMIT_HOOK = "#!/usr/bin/env sh\nnpm exec -- cqc staged\n";
-const COMMIT_MSG_HOOK = "#!/usr/bin/env sh\nnpm exec -- cqc commit-msg \"$1\"\n";
-const AUTO_PUSH_HOOK = "#!/usr/bin/env sh\nnpm exec -- cqc check && git push\n";
-const PRE_COMMIT_COMMAND = "npm exec -- cqc staged";
-const COMMIT_MSG_COMMAND = "npm exec -- cqc commit-msg \"$1\"";
+const PRE_COMMIT_HOOK = "#!/usr/bin/env sh\nnpm exec -- cq staged\n";
+const COMMIT_MSG_HOOK = "#!/usr/bin/env sh\nnpm exec -- cq commit-msg \"$1\"\n";
+const AUTO_PUSH_HOOK = "#!/usr/bin/env sh\nnpm exec -- cq check && git push\n";
+const PRE_COMMIT_COMMAND = "npm exec -- cq staged";
+const COMMIT_MSG_COMMAND = "npm exec -- cq commit-msg \"$1\"";
 const AUTO_PUSH_COMMAND = "git push";
 const AUTO_PUSH_HOOKS = ["post-commit", "pre-push"];
 
@@ -26,6 +27,8 @@ const options = [
   { label: "Configure checks", action: "config" },
   { label: "Run single check", action: "single" },
   { label: "Status", action: "status" },
+  { label: "Suggest commit", action: "suggest" },
+  { label: "Commit", action: "commit" },
   { label: "Staged check", action: "staged" },
   { label: "Full check", action: "check" },
   { label: "Quit", action: "quit" },
@@ -60,7 +63,7 @@ async function getHookState() {
   const commitMsgValid = await hasHookCommand(commitMsgPath, COMMIT_MSG_COMMAND);
   const autoPushValid = await hasHookCommand(autoPushPath, AUTO_PUSH_COMMAND);
   const hooksPath = await getGitHooksPath();
-  const hooksPathValid = hooksPath === ".husky";
+  const hooksPathValid = isManagedHooksPath(hooksPath);
   const enabled = preCommitValid && commitMsgValid && hooksPathValid;
   const broken = (preCommitExists || commitMsgExists) && !enabled;
 
@@ -69,9 +72,14 @@ async function getHookState() {
     commitMsg: commitMsgValid,
     autoPush: autoPushValid,
     hooksPath: hooksPathValid,
+    hooksPathValue: hooksPath,
     enabled,
     broken,
   };
+}
+
+function isManagedHooksPath(hooksPath) {
+  return hooksPath === ".husky" || hooksPath === ".husky/_";
 }
 
 async function getGitHooksPath() {
@@ -91,7 +99,7 @@ async function setGitHooksPath() {
 
 async function unsetGitHooksPathIfManaged() {
   const hooksPath = await getGitHooksPath();
-  if (hooksPath === ".husky") {
+  if (isManagedHooksPath(hooksPath)) {
     await execa("git", ["config", "--unset", "core.hooksPath"], { cwd: projRoot });
   }
 }
@@ -105,11 +113,11 @@ async function removeAutoPushHookIfSafe(filePath) {
       .filter((line) => line && !line.startsWith("#"));
 
     const hasPush = commandLines.some((line) => /\bgit\s+push\b/.test(line));
-    const cqcRelated = commandLines.some((line) =>
-      /\bcqc\b/.test(line) || /\bhusky\b/.test(line) || /\bgit\s+push\b/.test(line),
+    const cqRelated = commandLines.some((line) =>
+      /\bcq\b/.test(line) || /\bcqc\b/.test(line) || /\bhusky\b/.test(line) || /\bgit\s+push\b/.test(line),
     );
 
-    if (hasPush && cqcRelated) {
+    if (hasPush && cqRelated) {
       await unlink(filePath);
       return true;
     }
@@ -166,6 +174,85 @@ async function getSkippedChecks() {
 async function isAutoPushConfigured() {
   const projectPackage = await readProjectPackageFile();
   return projectPackage.gitQuality?.autoPush === true;
+}
+
+async function getStagedFiles() {
+  try {
+    const { stdout } = await execa(
+      "git",
+      ["diff", "--cached", "--name-only", "--diff-filter=ACMR"],
+      { cwd: projRoot },
+    );
+
+    return stdout
+      .split("\n")
+      .map((file) => file.trim())
+      .filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
+async function getStatusAnalysis() {
+  const stagedFiles = await getStagedFiles();
+  if (stagedFiles.length === 0) {
+    return {
+      analysis: null,
+      stagedFiles,
+      scoreSummary: null,
+      suggestionSummary: null,
+    };
+  }
+
+  const projectPackage = await readProjectPackageFile();
+  const packageManager = await detectPackageManager(projRoot);
+  const context = await ProjectContext.create({
+    root: projRoot,
+    projectPackage,
+    packageManager,
+    stagedFiles,
+  });
+
+  return {
+    analysis: context.analysis,
+    stagedFiles,
+    scoreSummary: context.scoreSummary,
+    suggestionSummary: context.suggestionSummary,
+  };
+}
+
+function buildJsonAnalysisPayload(statusAnalysis) {
+  return {
+    stagedFiles: statusAnalysis.stagedFiles,
+    analysis: statusAnalysis.analysis,
+    scoreSummary: statusAnalysis.scoreSummary,
+    suggestionSummary: statusAnalysis.suggestionSummary,
+  };
+}
+
+function formatStatusAnalysis(analysis) {
+  if (!analysis) {
+    return "";
+  }
+
+  const { stagedFiles, scoreSummary, suggestionSummary } = analysis;
+  let content = `staged files: ${C.green}${stagedFiles.length}${C.reset}`;
+
+  if (suggestionSummary) {
+    content += `\nsuggested commit: ${C.cyan}${suggestionSummary.suggestedHeader}${C.reset}`;
+  }
+
+  if (!scoreSummary) {
+    return content;
+  }
+
+  content +=
+    `\nprobable type: ${C.cyan}${scoreSummary.probableType}${C.reset}` +
+    `\nprobable scope: ${C.cyan}${scoreSummary.probableScope}${C.reset}` +
+    `\nrisk: ${C.yellow}${scoreSummary.riskLevel}${C.reset} (${scoreSummary.riskScore}/100)` +
+    `\nglobal score: ${C.green}${scoreSummary.globalScore}/100${C.reset}`;
+
+  return content;
 }
 
 async function saveAutoPushConfig(enabled) {
@@ -462,7 +549,145 @@ async function runCommitMsg(commitMsgPath) {
   process.exit(1);
 }
 
-async function executeAction(choice, arg = null) {
+async function promptCommitMessage(statusAnalysis, suggestedHeader) {
+  if (!process.stdin.isTTY || !process.stdout.isTTY) {
+    return suggestedHeader;
+  }
+
+  const suggestionBlock = formatSuggestionSummary(statusAnalysis.suggestionSummary).trim();
+  if (suggestionBlock) {
+    console.log(suggestionBlock);
+  }
+
+  console.log(`${C.cyan}Enter to accept, type custom message, or q to cancel${C.reset}`);
+
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+
+  const answer = await new Promise((resolve) => {
+    rl.question("Commit message: ", resolve);
+  });
+  rl.close();
+
+  const trimmed = answer.trim();
+  if (!trimmed) {
+    return suggestedHeader;
+  }
+
+  if (["q", "quit", "cancel"].includes(trimmed.toLowerCase())) {
+    return null;
+  }
+
+  return trimmed;
+}
+
+async function createSuggestedCommit(arg = null) {
+  const statusAnalysis = await getStatusAnalysis();
+
+  if (!statusAnalysis.stagedFiles.length) {
+    console.error(`${C.yellow}No staged files available for commit${C.reset}`);
+    process.exitCode = 1;
+    return;
+  }
+
+  const suggestedHeader = statusAnalysis.suggestionSummary?.suggestedHeader;
+  if (!suggestedHeader) {
+    console.error(`${C.yellow}No commit suggestion available${C.reset}`);
+    process.exitCode = 1;
+    return;
+  }
+
+  const commitMessage = arg?.trim()
+    ? arg.trim()
+    : await promptCommitMessage(statusAnalysis, suggestedHeader);
+
+  if (!commitMessage) {
+    console.log(`${C.yellow}Commit cancelled${C.reset}`);
+    return;
+  }
+
+  const result = await execa("git", ["commit", "-m", commitMessage], {
+    cwd: projRoot,
+    reject: false,
+  });
+
+  if (result.stdout.trim()) {
+    console.log(result.stdout.trim());
+  }
+
+  if (result.stderr.trim()) {
+    console.error(result.stderr.trim());
+  }
+
+  if (result.exitCode !== 0) {
+    process.exitCode = result.exitCode;
+    return;
+  }
+
+  console.log(`${C.green}Commit created: ${commitMessage}${C.reset}`);
+}
+
+async function runJsonCheck(arg = null) {
+  const profile = resolveJsonCheckProfile(arg);
+  const startTime = Date.now();
+  const stagedFiles = await getStagedFiles();
+  const projectPackage = await readProjectPackageFile();
+  const packageManager = await detectPackageManager(projRoot);
+  const engine = createQualityEngine({
+    root: projRoot,
+    projectPackage,
+    packageManager,
+    stagedFiles,
+    generateReport: true,
+    quiet: true,
+  });
+  const outcome = await engine.run(profile);
+  const durationMs = Date.now() - startTime;
+
+  console.log(JSON.stringify({
+    profile,
+    durationMs,
+    stagedFiles,
+    allSuccess: outcome.allSuccess,
+    results: outcome.results,
+    analysis: outcome.analysis,
+    scoreSummary: outcome.scoreSummary,
+    suggestionSummary: outcome.suggestionSummary,
+    reportPath: outcome.reportPath,
+  }, null, 2));
+
+  if (!outcome.allSuccess) {
+    process.exitCode = 1;
+  }
+}
+
+function resolveJsonCheckProfile(arg) {
+  if (arg === "--full" || arg === "full") {
+    return "full";
+  }
+
+  return "fast";
+}
+
+function shouldPrintTargetProject(choice, arg) {
+  if (!arg || choice === "commit-msg") {
+    return false;
+  }
+
+  if (choice === "commit") {
+    return false;
+  }
+
+  if (choice === "json-check" && (arg === "--full" || arg === "full")) {
+    return false;
+  }
+
+  return true;
+}
+
+async function executeAction(choice, arg = null, pauseAfter = true) {
   switch (choice) {
     case "toggle":
       await toggleHook();
@@ -485,6 +710,18 @@ async function executeAction(choice, arg = null) {
     case "status":
       await showStatus();
       break;
+    case "suggest":
+      await showSuggestion();
+      break;
+    case "json":
+      await showJsonAnalysis();
+      break;
+    case "json-check":
+      await runJsonCheck(arg);
+      break;
+    case "commit":
+      await createSuggestedCommit(arg);
+      break;
     case "staged":
       await runCheck({ fullProfile: false, root: arg || projRoot });
       break;
@@ -500,7 +737,7 @@ async function executeAction(choice, arg = null) {
       if (choice) console.log(`${C.yellow}Unknown command: ${choice}${C.reset}`);
   }
 
-  if (choice !== "quit") {
+  if (pauseAfter && choice !== "quit") {
     await pauseForTTY();
   }
 }
@@ -601,12 +838,14 @@ async function showStatus() {
   const hookState = await getHookState();
   const skippedChecks = await getSkippedChecks();
   const allCheckers = await getAvailableCheckers();
+  const statusAnalysis = await getStatusAnalysis();
   const enabledCount = allCheckers.length - skippedChecks.size;
   const stateLabel = hookState.enabled
     ? `${C.green}ON${C.reset}`
     : hookState.broken
       ? `${C.yellow}BROKEN${C.reset}`
       : `${C.red}OFF${C.reset}`;
+  const analysisBlock = formatStatusAnalysis(statusAnalysis);
 
   console.log(
     `\n${C.cyan}STATUS${C.reset}\n` +
@@ -614,9 +853,32 @@ async function showStatus() {
     `pre-commit: ${hookState.preCommit ? `${C.green}OK` : `${C.red}MISSING/BAD`}${C.reset}\n` +
     `commit-msg: ${hookState.commitMsg ? `${C.green}OK` : `${C.red}MISSING/BAD`}${C.reset}\n` +
     `auto-push: ${hookState.autoPush ? `${C.green}ON` : `${C.red}OFF`}${C.reset}\n` +
-    `core.hooksPath: ${hookState.hooksPath ? `${C.green}.husky` : `${C.red}MISSING/BAD`}${C.reset}\n` +
-    `checks enabled: ${C.green}${enabledCount}${C.reset}/${allCheckers.length}`,
+    `core.hooksPath: ${hookState.hooksPath ? `${C.green}${hookState.hooksPathValue}` : `${C.red}MISSING/BAD`}${C.reset}\n` +
+    `checks enabled: ${C.green}${enabledCount}${C.reset}/${allCheckers.length}` +
+    (analysisBlock ? `\n${analysisBlock}` : ""),
   );
+}
+
+async function showSuggestion() {
+  const statusAnalysis = await getStatusAnalysis();
+
+  if (!statusAnalysis.stagedFiles.length) {
+    console.log(`${C.yellow}No staged files available for commit suggestion${C.reset}`);
+    return;
+  }
+
+  const suggestionBlock = formatSuggestionSummary(statusAnalysis.suggestionSummary).trim();
+  if (!suggestionBlock) {
+    console.log(`${C.yellow}No commit suggestion available${C.reset}`);
+    return;
+  }
+
+  console.log(suggestionBlock);
+}
+
+async function showJsonAnalysis() {
+  const statusAnalysis = await getStatusAnalysis();
+  console.log(JSON.stringify(buildJsonAnalysisPayload(statusAnalysis), null, 2));
 }
 
 async function main() {
@@ -628,24 +890,30 @@ async function main() {
     e: "enable",
     d: "disable",
     s: "status",
+    u: "suggest",
+    j: "json",
     f: "staged",
     c: "check",
     g: "config",
     r: "single",
     p: "auto-push",
     m: "menu",
+    commit: "commit",
+    json: "json",
+    "json-check": "json-check",
+    suggest: "suggest",
     "auto-push": "auto-push",
     "commit-msg": "commit-msg",
   };
 
   const initialChoice = commandMap[cmd] || cmd;
 
-  if (arg && initialChoice !== "commit-msg") {
+  if (shouldPrintTargetProject(initialChoice, arg)) {
     console.log(`${C.cyan}Target project: ${arg}${C.reset}`);
   }
 
   if (initialChoice && initialChoice !== "menu") {
-    await executeAction(initialChoice, arg);
+    await executeAction(initialChoice, arg, false);
     return;
   }
 

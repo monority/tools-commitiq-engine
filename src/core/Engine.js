@@ -1,9 +1,8 @@
-import { join, dirname } from "node:path";
-import { fileURLToPath } from "node:url";
 import { ProjectContext } from "./ProjectContext.js";
 import { CheckRegistry } from "./CheckRegistry.js";
 import { TaskRunner } from "./TaskRunner.js";
 import { Reporter } from "./Reporter.js";
+import { registerBuiltinCheckers } from "../checkers/builtins.js";
 
 export class QualityEngine {
   constructor(options = {}) {
@@ -13,22 +12,41 @@ export class QualityEngine {
     this.reporter = new Reporter();
   }
 
+  log(message) {
+    if (!this.options.quiet) {
+      console.log(message);
+    }
+  }
+
+  error(message) {
+    if (!this.options.quiet) {
+      console.error(message);
+    }
+  }
+
   registerChecker(checker) {
     this.registry.register(checker);
     return this;
   }
 
-  async loadCheckers() {
-    const __dirname = dirname(fileURLToPath(import.meta.url));
-    const checkersDir = join(__dirname, "..", "checkers");
-    await this.registry.discover(checkersDir);
+  use(plugin) {
+    this.registry.registerPlugin(plugin);
     return this;
   }
 
+  async loadCheckers() {
+    if (this.registry.allCheckers.length > 0) {
+      return this;
+    }
+
+    return registerBuiltinCheckers(this);
+  }
+
   async run(profile = "fast") {
-    console.log(`🚀 Running Quality Check [Profile: ${profile}]`);
+    this.log(`🚀 Running Quality Check [Profile: ${profile}]`);
 
     try {
+      let reportPath = null;
       const context = await ProjectContext.create(this.options);
       context.profile = profile;
 
@@ -38,33 +56,52 @@ export class QualityEngine {
       const skipList = onlyCheckNames.length > 0 ? [] : context.config.skip;
       const checkers = this.registry.getCheckersForProfile(profile, skipList, onlyCheckNames);
 
-      console.log(`🔍 Executing ${checkers.length} checks...`);
+      this.log(`🔍 Executing ${checkers.length} checks...`);
       const results = await this.runner.execute(checkers, context);
 
       results.forEach(r => {
         if (!r.success) {
-          console.error(`❌ ${r.name} failed: ${r.message}`);
+          this.error(`❌ ${r.name} failed: ${r.message}`);
           if (r.suggestedFix) {
-            console.error(`💡 Fix: ${r.suggestedFix}`);
+            this.error(`💡 Fix: ${r.suggestedFix}`);
           }
         }
       });
 
       const allSuccess = results.every((r) => r.success);
       if (allSuccess) {
-        console.log("✅ All checks passed!");
+        this.log("✅ All checks passed!");
       } else {
-        console.error("🚨 Some checks failed. Please fix the issues before committing.");
+        this.error("🚨 Some checks failed. Please fix the issues before committing.");
         if (this.options.generateReport) {
-          const reportPath = await this.reporter.generateReport(results);
-          console.log(`📄 Report generated: ${reportPath}`);
+          reportPath = await this.reporter.generateReport(results, {
+            root: context.root,
+            analysis: context.analysis,
+            scoreSummary: context.scoreSummary,
+            suggestionSummary: context.suggestionSummary,
+          });
+          this.log(`📄 Report generated: ${reportPath}`);
         }
       }
 
-      return { allSuccess, results };
+      return {
+        allSuccess,
+        results,
+        analysis: context.analysis,
+        scoreSummary: context.scoreSummary,
+        suggestionSummary: context.suggestionSummary,
+        reportPath,
+      };
     } catch (error) {
-      console.error(`❌ Execution failed: ${error.message}`);
-      return { allSuccess: false, results: [] };
+      this.error(`❌ Execution failed: ${error.message}`);
+      return {
+        allSuccess: false,
+        results: [],
+        analysis: null,
+        scoreSummary: null,
+        suggestionSummary: null,
+        reportPath: null,
+      };
     }
   }
 

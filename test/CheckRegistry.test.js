@@ -43,3 +43,21 @@ test("filters by profile and explicit checker selection", () => {
   const fullChecks = registry.getCheckersForProfile("full", [], ["Full Check"]);
   assert.deepEqual(fullChecks.map((checker) => checker.name), ["Full Check"]);
 });
+
+test("registers checkers from plugin", () => {
+  const registry = new CheckRegistry();
+
+  registry.registerPlugin({
+    name: "demo-plugin",
+    checkers: () => [new FastChecker(), new FullChecker()],
+  });
+
+  assert.deepEqual(
+    registry.allCheckers.map((checker) => checker.name),
+    ["Fast Check", "Full Check"],
+  );
+  assert.deepEqual(
+    registry.allPlugins.map((plugin) => plugin.name),
+    ["demo-plugin"],
+  );
+});

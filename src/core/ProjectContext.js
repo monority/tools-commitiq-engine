@@ -1,6 +1,10 @@
 import { execa } from "execa";
 import { readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
+import { normalizeGitQualityConfig } from "./Config.js";
+import { DiffAnalyzer } from "./DiffAnalyzer.js";
+import { ScoringEngine } from "./ScoringEngine.js";
+import { SuggestionEngine } from "./SuggestionEngine.js";
 
 export class ProjectContext {
     /**
@@ -19,18 +23,53 @@ export class ProjectContext {
         this.projectPackage = null;
         this.packageManager = "npm";
         this.config = {};
+        this.stagedFiles = [];
+        this.stagedDiff = "";
+        this.analysis = null;
+        this.scoreSummary = null;
+        this.suggestionSummary = null;
     }
 
     async initialize() {
         try {
             this.root = await this.getProjectRoot();
-            this.projectPackage = await this.readProjectPackage();
-            this.packageManager = await this.detectPackageManager();
-            this.config = this.normalizeConfig(this.projectPackage.gitQuality || {});
+            this.projectPackage = this.options.projectPackage || await this.readProjectPackage();
+            this.packageManager = this.options.packageManager || await this.detectPackageManager();
+            this.config = normalizeGitQualityConfig(this.projectPackage.gitQuality || {});
+            this.stagedFiles = this.resolveStagedFiles();
+            this.stagedDiff = await this.resolveStagedDiff();
+            this.analysis = new DiffAnalyzer().analyze(this.stagedFiles, this.stagedDiff);
+            this.scoreSummary = new ScoringEngine().score(this.analysis);
+            this.suggestionSummary = new SuggestionEngine().suggest(this.analysis, this.scoreSummary);
         } catch (error) {
             throw new Error(`Project initialization failed: ${error.message}`);
         }
         return this;
+    }
+
+    resolveStagedFiles() {
+        if (Array.isArray(this.options.stagedFiles)) {
+            return [...this.options.stagedFiles];
+        }
+
+        return [];
+    }
+
+    async resolveStagedDiff() {
+        if (typeof this.options.stagedDiff === "string") {
+            return this.options.stagedDiff;
+        }
+
+        try {
+            const { stdout } = await execa(
+                "git",
+                ["diff", "--cached", "--no-color", "--unified=0"],
+                { cwd: this.root },
+            );
+            return stdout;
+        } catch {
+            return "";
+        }
     }
 
     async getProjectRoot() {
@@ -69,16 +108,5 @@ export class ProjectContext {
             if (pm.includes("bun")) return "bun";
         }
         return "npm";
-    }
-
-    normalizeConfig(config) {
-        return {
-            staged: {
-                prettier: config.staged?.prettier ?? true,
-                eslint: config.staged?.eslint ?? true,
-            },
-            skip: config.skip || [],
-            ignore: config.ignore || [],
-        };
     }
 }
