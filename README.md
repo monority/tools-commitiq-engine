@@ -101,7 +101,7 @@ git commit --no-verify -m "feat: ..."
 CQ expects all of these to be true:
 - `.husky/pre-commit` contains `npm exec -- cq staged`
 - `.husky/commit-msg` contains `npm exec -- cq commit-msg "$1"`
-- `git config core.hooksPath` points to `.husky`
+- `git config core.hooksPath` points to managed Husky hooks path such as `.husky` or `.husky/_`
 
 Common causes:
 - hooks were created by an older hook setup version
@@ -213,4 +213,4 @@ When a check fails or a dependency is missing, a `quality-report.md` is generate
 
 ## Repository
 
-[https://github.com/monority/commitiq-engine](https://github.com/monority/commitiq-engine)
+[https://github.com/monority/tools-commitiq-engine](https://github.com/monority/tools-commitiq-engine)

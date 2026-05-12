@@ -1,5 +1,20 @@
 # Changelog
 
+## 3.0.1 - 2026-05-12
+
+### Fixed
+
+- Restored backward-compatible `cqc` npm alias so stale local shims and older hook setups do not break after rename to `cq`.
+- Status logic now accepts Husky-managed `core.hooksPath` values `.husky` and `.husky/_`.
+- Package metadata and README repository links now point to canonical GitHub repository `monority/tools-commitiq-engine`.
+
+### Validation
+
+- `npm exec -- cq status`
+- `npm exec -- cqc status`
+- `npm pack --dry-run`
+- `npm test`
+
 ## 3.0.0 - 2026-05-11
 
 ### Breaking

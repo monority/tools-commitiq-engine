@@ -40,11 +40,11 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/monority/commitiq-engine.git"
+    "url": "git+https://github.com/monority/tools-commitiq-engine.git"
   },
-  "homepage": "https://github.com/monority/commitiq-engine#readme",
+  "homepage": "https://github.com/monority/tools-commitiq-engine#readme",
   "bugs": {
-    "url": "https://github.com/monority/commitiq-engine/issues"
+    "url": "https://github.com/monority/tools-commitiq-engine/issues"
   },
   "author": "Ronan Chenu <ronan.chenu@example.com>",
   "license": "MIT",
