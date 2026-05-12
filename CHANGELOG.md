@@ -1,5 +1,17 @@
 # Changelog
 
+## 3.0.4 - 2026-05-12
+
+### Changed
+
+- GitHub Actions release publish step now authenticates to npm with repository secret `NPM_TOKEN`, so tagged releases can publish package from CI.
+
+### Validation
+
+- `npm version patch`
+- `npm pack --dry-run`
+- `npm test`
+
 ## 3.0.3 - 2026-05-12
 
 ### Changed
