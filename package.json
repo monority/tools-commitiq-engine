@@ -1,7 +1,7 @@
 {
   "name": "commitiq-engine",
-  "version": "3.0.2",
-  "description": "CommitIQ Engine: diff-aware commit quality intelligence for staged changes and release-safe Git workflows.",
+  "version": "3.0.3",
+  "description": "Git commit quality CLI for pre-commit hooks, commit-msg validation, staged-file checks, and Husky git-hook workflows.",
   "type": "module",
   "main": "scripts/cli.js",
   "bin": {
@@ -28,14 +28,19 @@
   },
   "keywords": [
     "git",
+    "git-hooks",
     "pre-commit",
+    "commit-msg",
     "husky",
+    "conventional-commits",
+    "code-quality",
+    "staged-files",
+    "commit-lint",
     "eslint",
     "prettier",
     "quality",
     "commit",
     "diff-aware",
-    "release",
     "guard"
   ],
   "repository": {

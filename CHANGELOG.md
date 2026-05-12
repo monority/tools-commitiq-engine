@@ -1,5 +1,18 @@
 # Changelog
 
+## 3.0.3 - 2026-05-12
+
+### Changed
+
+- Improved npm discoverability metadata with stronger search-oriented description and keywords such as `git-hooks`, `commit-msg`, `staged-files`, and `conventional-commits`.
+- README overview and features now describe CommitIQ Engine as a pre-commit, commit-msg, and Husky-oriented git-hook CLI.
+
+### Validation
+
+- `npm install --package-lock-only`
+- `npm pack --dry-run`
+- `npm test`
+
 ## 3.0.1 - 2026-05-12
 
 ### Fixed

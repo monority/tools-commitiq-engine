@@ -7,18 +7,19 @@
 </p>
 
 <p align="center">
-  <strong>A premium, diff-aware CLI that polishes each commit before it reaches your repository.</strong>
+  <strong>Git commit quality CLI for pre-commit hooks, commit-msg validation, staged-file checks, and Husky workflows.</strong>
 </p>
 
 ---
 
 ##  Overview
 
-`commitiq-engine` (`cq`) is a diff-aware Git workflow assistant built to prevent rough, risky, or under-tested commits. It automates linting, formatting, quality checks, commit suggestions, and CI-friendly analysis so each staged change lands cleaner.
+`commitiq-engine` (`cq`) is a diff-aware Git commit quality CLI for pre-commit hooks, commit-msg validation, staged-file checks, and Husky git-hook workflows. It automates linting, formatting, quality checks, commit suggestions, and CI-friendly analysis so each staged change lands cleaner.
 
 ##  Features
 
 - **Zero Configuration**: Auto-detects your package manager (`npm`, `pnpm`, `yarn`, `bun`) and common quality scripts.
+- **Git Hooks Ready**: Works with Husky pre-commit and commit-msg hooks out of the box.
 - **Smart Dependency Suggestions**: If `eslint` or `prettier` are missing, the tool generates a report with the exact commands needed to install them.
 - **Flexible Commit Validation**: Supports both [Conventional Commits](https://www.conventionalcommits.org/) and [Gitmoji](https://gitmoji.dev/) (emoji-shortcodes like `:art:`) to keep your history clean.
 - **Secret Scanner**: Detects API keys, tokens, passwords before they get committed.
