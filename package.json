@@ -1,6 +1,6 @@
 {
   "name": "commitiq-engine",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "description": "CommitIQ Engine: diff-aware commit quality intelligence for staged changes and release-safe Git workflows.",
   "type": "module",
   "main": "scripts/cli.js",
