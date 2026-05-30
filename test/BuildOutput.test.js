@@ -20,9 +20,9 @@ test("build writes runnable dist package manifest without self dependency", asyn
 
     const distPackage = JSON.parse(await readFile(distPackagePath, "utf8"));
 
-    assert.equal(distPackage.name, "commitiq-engine");
-    assert.equal(distPackage.main, "scripts/cli.js");
-    assert.equal(distPackage.bin["commitiq-engine"], "scripts/cli.js");
+     assert.equal(distPackage.name, "commit-quality-check");
+     assert.equal(distPackage.main, "scripts/cli.js");
+     assert.equal(distPackage.bin["commit-quality-check"], "scripts/cli.js");
     assert.equal(distPackage.bin.cq, "scripts/cli.js");
     assert.equal(distPackage.bin.cqc, "scripts/cli.js");
     assert.ok(distPackage.files.includes("src"));

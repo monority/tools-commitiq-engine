@@ -1,11 +1,11 @@
 {
-  "name": "commitiq-engine",
+  "name": "commit-quality-check",
   "version": "3.0.4",
   "description": "Git commit quality CLI for pre-commit hooks, commit-msg validation, staged-file checks, and Husky git-hook workflows.",
   "type": "module",
   "main": "scripts/cli.js",
   "bin": {
-    "commitiq-engine": "scripts/cli.js",
+    "commit-quality-check": "scripts/cli.js",
     "cq": "scripts/cli.js",
     "cqc": "scripts/cli.js"
   },
@@ -65,6 +65,6 @@
       "Debug Artifacts",
       "Playwright Tests"
     ],
-    "autoPush": false
+    "autoPush": true
   }
 }

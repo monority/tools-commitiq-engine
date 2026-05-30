@@ -1,9 +1,9 @@
 <h1 align="center">
-  CommitIQ Engine
+  Commit Quality Checker
 </h1>
 
 <p align="center">
-  <img src="./logo-commit.svg" alt="CommitIQ Engine Logo" width="120"/>
+   <img src="./logo-commit.svg" alt="Commit Quality Checker Logo" width="120"/>
 </p>
 
 <p align="center">
@@ -14,7 +14,7 @@
 
 ##  Overview
 
-`commitiq-engine` (`cq`) is a diff-aware Git commit quality CLI for pre-commit hooks, commit-msg validation, staged-file checks, and Husky git-hook workflows. It automates linting, formatting, quality checks, commit suggestions, and CI-friendly analysis so each staged change lands cleaner.
+`commit-quality-check` (`cq`) is a diff-aware Git commit quality CLI for pre-commit hooks, commit-msg validation, staged-file checks, and Husky git-hook workflows. It automates linting, formatting, quality checks, commit suggestions, and CI-friendly analysis so each staged change lands cleaner.
 
 ##  Features
 
@@ -35,26 +35,32 @@
 
 ### Quick Start
 Install the tool and enable the hook:
-
+ 
 ```bash
-npm install --save-dev commitiq-engine husky
+npm install --save-dev commit-quality-check husky
 npx cq enable
+```
+ 
+Or with pnpm:
+```bash
+pnpm add -D commit-quality-check husky
+pnpm exec cq enable
 ```
 
 Or with pnpm:
 ```bash
-pnpm add -D commitiq-engine husky
+pnpm add -D commit-quality-check husky
 pnpm exec cq enable
 ```
 
-## üõ† Usage & Commands
+## Y>† Usage & Commands
 
 Run `npx cq` to show interactive menu (arrow keys + enter):
 
 ```
-‚îÅ‚îÅ‚îÅ COMMITIQ ENGINE ‚îÅ‚îÅ‚îÅ
+‚"?‚"?‚"? COMMIT QUALITY CHECKER ‚"?‚"?‚"?
 
-  ‚ñ∂ Toggle hook ON
+  ‚-∂ Toggle hook ON
     Toggle auto-push OFF
     Configure checks
     Run single check
@@ -65,7 +71,7 @@ Run `npx cq` to show interactive menu (arrow keys + enter):
     Full check
     Quit
 
-‚Üë‚Üì Select  ENTER Confirm  Q Quit
+‚+'‚+" Select  ENTER Confirm  Q Quit
 ```
 
 Or use direct commands:
@@ -215,3 +221,8 @@ When a check fails or a dependency is missing, a `quality-report.md` is generate
 ## Repository
 
 [https://github.com/monority/tools-commitiq-engine](https://github.com/monority/tools-commitiq-engine)
+
+
+
+
+
