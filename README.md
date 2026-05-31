@@ -220,7 +220,7 @@ When a check fails or a dependency is missing, a `quality-report.md` is generate
 
 ## Repository
 
-[https://github.com/monority/tools-commitiq-engine](https://github.com/monority/tools-commitiq-engine)
+[https://github.com/monority/commit-quality-check](https://github.com/monority/commit-quality-check)
 
 
 

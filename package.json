@@ -45,11 +45,11 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/monority/tools-commitiq-engine.git"
+    "url": "git+https://github.com/monority/commit-quality-check.git"
   },
-  "homepage": "https://github.com/monority/tools-commitiq-engine#readme",
+  "homepage": "https://github.com/monority/commit-quality-check#readme",
   "bugs": {
-    "url": "https://github.com/monority/tools-commitiq-engine/issues"
+    "url": "https://github.com/monority/commit-quality-check/issues"
   },
   "author": "Ronan Chenu <ronan.chenu@example.com>",
   "license": "MIT",
