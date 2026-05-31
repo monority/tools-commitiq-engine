@@ -1,6 +1,18 @@
 # Changelog
 
-## 3.0.4 - 2026-05-12
+## 3.0.5 - 2026-05-31
+
+### Changed
+
+- npm package renamed from `commitiq-engine` back to `commit-quality-check` for better discoverability.
+- CLI binary updated from `commitiq-engine` to `commit-quality-check`.
+- README updated to reflect new package name in installation commands, overview, and repository links.
+- Repository URLs updated to `monority/commit-quality-check`.
+
+### Validation
+
+- `npm test`
+- `npm pack --dry-run`
 
 ### Changed
 
